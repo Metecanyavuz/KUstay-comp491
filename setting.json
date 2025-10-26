@@ -1,0 +1,11 @@
+{
+    "ssh": "Disabled",
+    "previewLimit": 50,
+    "server": "127.0.0.1",
+    "port": 5433,
+    "driver": "PostgreSQL",
+    "database": "kustay_db",
+    "username": "kustay_user",
+    "password": "kustay_password",
+    "name": "kustay_connection"
+  }

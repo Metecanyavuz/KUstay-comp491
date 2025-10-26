@@ -3,6 +3,7 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+
 # C extensions
 *.so
 
@@ -205,3 +206,32 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Virtual Environment
+venv/
+env/
+
+# Python Cache Files
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+db.sqlite3
+*.log
+local_settings.py
+
+# Environment Variables
+.env
+
+# Mac System Files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Media and Static (optional - uncomment if needed)
+# media/
+# staticfiles/
