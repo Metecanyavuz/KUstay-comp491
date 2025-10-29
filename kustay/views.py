@@ -5,19 +5,40 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import redirect, render
 
 from .forms import ProfileForm
-from .models import Profile
+from .models import Listing, Profile
+
+
+def home_view(request):
+    return render(
+        request,
+        "home.html",
+        {
+            "user": request.user,
+        },
+    )
+
+
+def listing_list_view(request):
+    listings = Listing.objects.filter(is_active=True).select_related("user")
+    return render(
+        request,
+        "listings.html",
+        {
+            "listings": listings,
+        },
+    )
 
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect("profile")
+        return redirect("home")
 
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            return redirect("profile")
+            return redirect("home")
         messages.error(request, "Invalid email or password.")
     else:
         form = AuthenticationForm(request)

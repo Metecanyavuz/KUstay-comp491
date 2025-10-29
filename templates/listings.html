@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Listings</title>
+</head>
+<body>
+    <h1>Available Listings</h1>
+    <p><a href="{% url 'home' %}">Back to home</a></p>
+    {% if listings %}
+        <ul>
+            {% for listing in listings %}
+                <li>
+                    <strong>{{ listing.title }}</strong> — {{ listing.get_listing_type_display }}<br>
+                    Hosted by {{ listing.user.get_username }}<br>
+                    Rent: ${{ listing.rent_amount }}<br>
+                    {% if listing.address %}Address: {{ listing.address }}{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No active listings right now.</p>
+    {% endif %}
+</body>
+</html>

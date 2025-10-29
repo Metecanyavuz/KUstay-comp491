@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>KUStay</title>
+</head>
+<body>
+    <h1>Welcome to KUStay</h1>
+    {% if user.is_authenticated %}
+        <p>You are logged in as {{ user.get_username }}.</p>
+        <p><a href="{% url 'profile' %}">View your profile</a></p>
+        <p><a href="{% url 'listings' %}">Browse listings</a></p>
+        <p><a href="{% url 'logout' %}">Log out</a></p>
+    {% else %}
+        <p><a href="{% url 'listings' %}">Browse listings</a> to see available stays.</p>
+        <p><a href="{% url 'login' %}">Log in</a> to manage your preferences.</p>
+    {% endif %}
+</body>
+</html>
