@@ -149,3 +149,69 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Review #{self.review_id} by {self.reviewer}"
+
+
+class Report(models.Model):
+    class ReportType(models.TextChoices):
+        USER = "user", "User"
+        LISTING = "listing", "Listing"
+        MESSAGE = "message", "Message"
+        OTHER = "other", "Other"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        IN_REVIEW = "in_review", "In Review"
+        RESOLVED = "resolved", "Resolved"
+        DISMISSED = "dismissed", "Dismissed"
+
+    report_id = models.BigAutoField(primary_key=True)
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reports_filed",
+    )
+    reported_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reports_received",
+    )
+    reported_listing = models.ForeignKey(
+        "Listing",
+        on_delete=models.CASCADE,
+        related_name="reports",
+        null=True,
+        blank=True,
+    )
+    reported_message = models.ForeignKey(
+        "Message",
+        on_delete=models.CASCADE,
+        related_name="reports",
+        null=True,
+        blank=True,
+    )
+    report_type = models.CharField(
+        max_length=20,
+        choices=ReportType.choices,
+        default=ReportType.USER,
+    )
+    description = models.TextField()
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="reports_resolved",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Report #{self.report_id} on {self.report_type}"
