@@ -110,3 +110,42 @@ class Listing(models.Model):
 
     def __str__(self):
         return f"{self.title} (#{self.listing_id})"
+
+
+class Review(models.Model):
+    class ModerationStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    review_id = models.BigAutoField(primary_key=True)
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reviews_written",
+    )
+    reviewed_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reviews_received",
+    )
+    listing = models.ForeignKey(
+        "Listing",
+        on_delete=models.CASCADE,
+        related_name="reviews",
+    )
+    rating = models.IntegerField()
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_approved = models.BooleanField(default=False)
+    moderation_status = models.CharField(
+        max_length=20,
+        choices=ModerationStatus.choices,
+        default=ModerationStatus.PENDING,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Review #{self.review_id} by {self.reviewer}"
