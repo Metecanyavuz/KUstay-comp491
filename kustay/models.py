@@ -1,16 +1,28 @@
 from django.conf import settings
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 
-class User(models.Model):
-    username = models.CharField(max_length=150, unique=True)
+
+class User(AbstractUser):
+    """Custom User model extending Django's AbstractUser"""
+    USER_TYPE_CHOICES = [
+        ('KU_Student', 'KU Student'),
+        ('External_Student', 'External Student'),
+    ]
+    user_id = models.AutoField(primary_key=True)
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
+    is_verified = models.BooleanField(default=False)
+    verification_token = models.CharField(max_length=255, blank=True, null=True)
+    last_login = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
 
     def __str__(self):
-        return self.username
+        return self.email
 
 
 class Profile(models.Model):
@@ -24,17 +36,25 @@ class Profile(models.Model):
         ("night_owl", "Night Owl"),
         ("flexible", "Flexible"),
     ]
+    ROOM_TYPE_CHOICES = [
+        ("private", "Private Room"),
+        ("shared", "Shared Room"),
+        ("entire_place", "Entire Place"),
+    ]
+    STUDY_HABITS_CHOICES = [
+        ("quiet", "Quiet"),
+        ("moderate", "Moderate"),
+        ("social", "Social"),
+    ]
+
+    profile_id = models.AutoField(primary_key=True)
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="profile",
     )
-    budget_min = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    budget_max = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    move_in_date = models.DateField(null=True, blank=True)
-    smoker = models.BooleanField(default=False)
-    pets = models.BooleanField(default=False)
+
     sleep_schedule = models.CharField(
         max_length=20,
         choices=SLEEP_SCHEDULE_CHOICES,
@@ -45,8 +65,27 @@ class Profile(models.Model):
         choices=CLEANLINESS_CHOICES,
         default="medium",
     )
+    room_type_preference = models.CharField(
+        max_length=20,
+        choices=ROOM_TYPE_CHOICES,
+        default="private",
+    )
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    department = models.CharField(max_length=100, blank=True)
+    faculty = models.CharField(max_length=100, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+    budget_min = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    budget_max = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    preferred_neighborhoods = models.JSONField(default=list, blank=True)
+    move_in_date = models.DateField(null=True, blank=True)
+    smoker = models.BooleanField(default=False)
+    pets = models.BooleanField(default=False)
     lifestyle_notes = models.TextField(blank=True)
+    profile_photo_url = models.URLField(blank=True)
+
     updated_at = models.DateTimeField(auto_now=True)
+
 
     def __str__(self):
         return f"Profile({self.user.username})"
@@ -150,7 +189,102 @@ class Review(models.Model):
     def __str__(self):
         return f"Review #{self.review_id} by {self.reviewer}"
 
+class ListingImage(models.Model):
+    image_id = models.AutoField(primary_key=True)
+    listing = models.ForeignKey(
+        "Listing",
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image_url = models.URLField()
+    is_primary = models.BooleanField(default=False)
+    upload_date = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ["-is_primary", "-upload_date"]
+
+    def __str__(self):
+        return f"Image for {self.listing.title}"
+
+class Conversation(models.Model):
+    conversation_id = models.BigAutoField(primary_key=True)
+    user1 = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="conversations_as_user1",
+    )
+    user2 = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="conversations_as_user2",
+    )
+    last_message_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user1", "user2")
+        ordering = ["-last_message_at"]
+
+    def __str__(self):
+        return f"Conversation between {self.user1} and {self.user2}"
+
+class Message(models.Model):
+    message_id = models.BigAutoField(primary_key=True)
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="messages_sent",
+    )
+    receiver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="messages_received",
+    )
+    conversation = models.ForeignKey(
+        "Conversation",
+        on_delete=models.CASCADE,
+        related_name="messages",
+    )
+    listing = models.ForeignKey(
+        "Listing",
+        on_delete=models.SET_NULL,
+        related_name="messages",
+        null=True,
+        blank=True,
+    )
+    message_text = models.TextField()
+    is_read = models.BooleanField(default=False)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-sent_at"]
+
+    def __str__(self):
+        return f"Message from {self.sender} to {self.receiver}"
+        
+class BlockReview(models.Model):
+    block_review_id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="block_reviews",
+    )
+    block_name = models.CharField(max_length=255)
+    neighborhood = models.CharField(max_length=255)
+    noise_rating = models.IntegerField()
+    management_rating = models.IntegerField()
+    safety_rating = models.IntegerField()
+    transport_rating = models.IntegerField()
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Block Review: {self.block_name} by {self.user}"
+    
 class Report(models.Model):
     class ReportType(models.TextChoices):
         USER = "user", "User"
@@ -216,7 +350,27 @@ class Report(models.Model):
     def __str__(self):
         return f"Report #{self.report_id} on {self.report_type}"
 
+class BlockedUser(models.Model):
+    block_id = models.BigAutoField(primary_key=True)
+    blocker = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="blocked_users",
+    )
+    blocked = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="blocked_by_users",
+    )
+    blocked_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ("blocker", "blocked")
+        ordering = ["-blocked_at"]
+
+    def __str__(self):
+        return f"{self.blocker} blocked {self.blocked}"
+    
 class MatchCompatibility(models.Model):
     match_id = models.BigAutoField(primary_key=True)
     user1 = models.ForeignKey(
@@ -239,3 +393,33 @@ class MatchCompatibility(models.Model):
 
     def __str__(self):
         return f"Match {self.user1} ↔ {self.user2} ({self.compatibility_score}%)"
+
+class Notification(models.Model):
+    class NotificationType(models.TextChoices):
+        MESSAGE = "message", "New Message"
+        MATCH = "match", "New Match"
+        REVIEW = "review", "New Review"
+        LISTING = "listing", "Listing Update"
+        SYSTEM = "system", "System"
+
+    notification_id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    notification_type = models.CharField(
+        max_length=20,
+        choices=NotificationType.choices,
+    )
+    content = models.TextField()
+    related_id = models.IntegerField(null=True, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Notification for {self.user}: {self.notification_type}"
+    
