@@ -215,3 +215,27 @@ class Report(models.Model):
 
     def __str__(self):
         return f"Report #{self.report_id} on {self.report_type}"
+
+
+class MatchCompatibility(models.Model):
+    match_id = models.BigAutoField(primary_key=True)
+    user1 = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="match_compatibilities_initiated",
+    )
+    user2 = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="match_compatibilities_received",
+    )
+    compatibility_score = models.DecimalField(max_digits=5, decimal_places=2)
+    matching_criteria = models.JSONField(default=dict, blank=True)
+    calculated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user1", "user2")
+        ordering = ["-calculated_at"]
+
+    def __str__(self):
+        return f"Match {self.user1} ↔ {self.user2} ({self.compatibility_score}%)"
