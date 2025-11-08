@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Your Matches</title>
+</head>
+<body>
+    <h1>Top Compatibility Matches</h1>
+    <p><a href="{% url 'home' %}">Back to home</a></p>
+
+    {% if matches %}
+        {% for match in matches %}
+            <section style="border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem;">
+                <h2>
+                    {% if match.profile %}
+                        {{ match.profile.first_name }} {{ match.profile.last_name }}
+                    {% else %}
+                        {{ match.user.first_name }} {{ match.user.last_name }}
+                    {% endif %}
+                    — <strong>{{ match.score }}%</strong>
+                </h2>
+                {% if match.profile %}
+                    <p>
+                        {{ match.profile.department }} {{ match.profile.faculty }}
+                    </p>
+                {% endif %}
+                <h3>Compatibility breakdown</h3>
+                <ul>
+                    {% for key, detail in match.criteria.items %}
+                        {% if key != "total" %}
+                            <li>
+                                <strong>{{ key|capfirst }}</strong>:
+                                {{ detail.score }} / {{ detail.weight }} —
+                                {{ detail.reason }}
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endfor %}
+    {% else %}
+        <p>No compatible matches yet. Update your preferences and check back soon.</p>
+    {% endif %}
+</body>
+</html>
