@@ -141,6 +141,7 @@ class Listing(models.Model):
     amenities = models.JSONField(default=list, blank=True)
     house_rules = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    image = models.ImageField(upload_to="listing_images/", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
