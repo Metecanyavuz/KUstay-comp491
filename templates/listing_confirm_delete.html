@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Delete {{ listing.title }}</title>
+</head>
+<body>
+    <h1>Delete Listing</h1>
+    <p>Are you sure you want to delete <strong>{{ listing.title }}</strong>?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Yes, delete</button>
+        <a href="{% url 'listing_detail' listing.listing_id %}">Cancel</a>
+    </form>
+</body>
+</html>
