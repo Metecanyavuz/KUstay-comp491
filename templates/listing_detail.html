@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ listing.title }}</title>
+</head>
+<body>
+    <p><a href="{% url 'listings' %}">&larr; Back to Listings</a></p>
+    <h1>{{ listing.title }}</h1>
+    <p>Hosted by {{ listing.user.get_full_name|default:listing.user.get_username }}</p>
+
+    {% if listing.image %}
+        <div>
+            <img src="{{ listing.image.url }}" alt="{{ listing.title }}" style="max-width: 400px;">
+        </div>
+    {% endif %}
+
+    <p><strong>Listing Type:</strong> {{ listing.get_listing_type_display }}</p>
+    <p><strong>Room Type:</strong> {{ listing.get_room_type_display }}</p>
+    <p><strong>Rent:</strong> ${{ listing.rent_amount }}</p>
+    {% if listing.address %}
+        <p><strong>Address:</strong> {{ listing.address }}</p>
+    {% endif %}
+    {% if listing.neighborhood %}
+        <p><strong>Neighborhood:</strong> {{ listing.neighborhood }}</p>
+    {% endif %}
+    {% if listing.available_from %}
+        <p><strong>Available From:</strong> {{ listing.available_from }}</p>
+    {% endif %}
+    <p><strong>Rooms:</strong> {{ listing.available_rooms }} of {{ listing.total_rooms }} available</p>
+
+    <h2>Description</h2>
+    <p>{{ listing.description }}</p>
+
+    {% if listing.amenities %}
+        <h2>Amenities</h2>
+        <ul>
+            {% for amenity in listing.amenities %}
+                <li>{{ amenity }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if listing.house_rules %}
+        <h2>House Rules</h2>
+        <p>{{ listing.house_rules }}</p>
+    {% endif %}
+
+    {% if user.is_authenticated and user == listing.user %}
+        <p>
+            <a href="{% url 'listing_edit' listing.listing_id %}">Edit</a> |
+            <a href="{% url 'listing_delete' listing.listing_id %}">Delete</a>
+        </p>
+    {% endif %}
+</body>
+</html>

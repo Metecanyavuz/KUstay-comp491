@@ -9,7 +9,9 @@
     {% if user.is_authenticated %}
         <p>You are logged in as {{ user.get_username }}.</p>
         <p><a href="{% url 'profile' %}">View your profile</a></p>
+        <p><a href="{% url 'matches' %}">See your matches</a></p>
         <p><a href="{% url 'listings' %}">Browse listings</a></p>
+        <p><a href="{% url 'listing_create' %}">Create a new listing</a></p>
         <p><a href="{% url 'logout' %}">Log out</a></p>
     {% else %}
         <p><a href="{% url 'listings' %}">Browse listings</a> to see available stays.</p>

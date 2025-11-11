@@ -7,14 +7,70 @@
 <body>
     <h1>Available Listings</h1>
     <p><a href="{% url 'home' %}">Back to home</a></p>
+    <form method="get" style="margin-bottom: 1rem;">
+        <div>
+            <label>
+                Location
+                <input type="text" name="location" value="{{ filters.location }}">
+            </label>
+        </div>
+        <div>
+            <label>
+                Min price
+                <input type="number" name="price_min" step="0.01" value="{{ filters.price_min }}">
+            </label>
+            <label>
+                Max price
+                <input type="number" name="price_max" step="0.01" value="{{ filters.price_max }}">
+            </label>
+        </div>
+        <div>
+            <label>
+                Amenities (comma separated)
+                <input type="text" name="amenities" value="{{ filters.amenities }}">
+            </label>
+        </div>
+        <button type="submit">Search</button>
+        <a href="{% url 'listings' %}">Clear</a>
+    </form>
+    {% if filters.location or filters.price_min or filters.price_max or filters.amenity_terms %}
+        <p>
+            Active filters:
+            {% if filters.location %}Location contains "<strong>{{ filters.location }}</strong>" {% endif %}
+            {% if filters.price_min %}Min price {{ filters.price_min }} {% endif %}
+            {% if filters.price_max %}Max price {{ filters.price_max }} {% endif %}
+            {% if filters.amenity_terms %}
+                Amenities:
+                {% for amenity in filters.amenity_terms %}
+                    <span>{{ amenity }}</span>
+                {% endfor %}
+            {% endif %}
+        </p>
+    {% endif %}
+    {% if user.is_authenticated %}
+        <p><a href="{% url 'listing_create' %}">Create a new listing</a></p>
+    {% endif %}
+
     {% if listings %}
         <ul>
             {% for listing in listings %}
-                <li>
-                    <strong>{{ listing.title }}</strong> — {{ listing.get_listing_type_display }}<br>
-                    Hosted by {{ listing.user.get_username }}<br>
-                    Rent: ${{ listing.rent_amount }}<br>
-                    {% if listing.address %}Address: {{ listing.address }}{% endif %}
+                <li style="margin-bottom: 1.5rem;">
+                    {% if listing.image %}
+                        <div>
+                            <img src="{{ listing.image.url }}" alt="{{ listing.title }}" style="max-width: 250px;">
+                        </div>
+                    {% endif %}
+                    <h2>
+                        <a href="{% url 'listing_detail' listing.listing_id %}">
+                            {{ listing.title }}
+                        </a>
+                    </h2>
+                    <p>{{ listing.get_listing_type_display }} • {{ listing.get_room_type_display }}</p>
+                    <p>Hosted by {{ listing.user.get_full_name|default:listing.user.get_username }}</p>
+                    <p>Rent: ${{ listing.rent_amount }}</p>
+                    {% if listing.address %}
+                        <p>{{ listing.address }}</p>
+                    {% endif %}
                 </li>
             {% endfor %}
         </ul>

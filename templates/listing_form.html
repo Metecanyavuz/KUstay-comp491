@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{% if is_edit %}Edit{% else %}Create{% endif %} Listing</title>
+</head>
+<body>
+    <p><a href="{% url 'listings' %}">&larr; Back to Listings</a></p>
+    <h1>{% if is_edit %}Edit{% else %}Create{% endif %} Listing</h1>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">{% if is_edit %}Save changes{% else %}Create listing{% endif %}</button>
+    </form>
+</body>
+</html>
