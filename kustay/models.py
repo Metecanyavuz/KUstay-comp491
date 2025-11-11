@@ -3,32 +3,32 @@ from django.db import models
 
 
 class User(models.Model):
-    username = models.CharField(max_length=150, unique=True)
-    email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    created_at = models.DateTimeField(auto_now_add=True)
+    username = models.CharField(max_length=150, unique=True) #username field
+    email = models.EmailField(unique=True) #email field
+    first_name = models.CharField(max_length=100) #first name field
+    last_name = models.CharField(max_length=100) #last name field
+    created_at = models.DateTimeField(auto_now_add=True) #creation date field
 
-    def __str__(self):
+    def __str__(self):  #string representation of the user
         return self.username
 
 
-class Profile(models.Model):
-    CLEANLINESS_CHOICES = [
+class Profile(models.Model): #user profile model
+    CLEANLINESS_CHOICES = [ #cleanliness level choices
         ("low", "Low"),
         ("medium", "Medium"),
         ("high", "High"),
     ]
-    SLEEP_SCHEDULE_CHOICES = [
+    SLEEP_SCHEDULE_CHOICES = [ #sleep schedule choices
         ("early_bird", "Early Bird"),
         ("night_owl", "Night Owl"),
         ("flexible", "Flexible"),
     ]
 
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="profile",
+    user = models.OneToOneField( #user field
+        settings.AUTH_USER_MODEL, #django user model
+        on_delete=models.CASCADE, #delete profile if user is deleted
+        related_name="profile", #related name for reverse lookup
     )
     budget_min = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     budget_max = models.DecimalField(max_digits=10, decimal_places=2, default=0)
