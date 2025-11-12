@@ -1,18 +1,19 @@
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .forms import ListingForm, ProfileForm
-from .models import Listing, MatchCompatibility, Profile
+from .forms import ListingForm, MessageForm, ProfileForm
+from .models import Conversation, Listing, MatchCompatibility, Message, Profile
 from .utils.matching import calculate_matches_for_user
 
 
@@ -202,6 +203,107 @@ def logout_view(request):
     logout(request)
     messages.success(request, "You have been logged out.")
     return redirect("login")
+
+
+def _get_or_create_conversation(user_a, user_b):
+    if user_a.pk == user_b.pk:
+        raise ValueError("Cannot start a conversation with yourself.")
+    ordered = sorted([user_a, user_b], key=lambda u: u.pk)
+    conversation, _ = Conversation.objects.get_or_create(
+        user1=ordered[0],
+        user2=ordered[1],
+    )
+    return conversation
+
+
+@login_required
+def conversation_list_view(request):
+    conversations = (
+        Conversation.objects.filter(Q(user1=request.user) | Q(user2=request.user))
+        .select_related("user1", "user2")
+        .order_by("-last_message_at", "-created_at")
+    )
+
+    items = []
+    for convo in conversations:
+        partner = convo.user2 if convo.user1_id == request.user.pk else convo.user1
+        last_message = (
+            convo.messages.select_related("sender").order_by("-sent_at").first()
+        )
+        items.append(
+            {
+                "conversation": convo,
+                "partner": partner,
+                "last_message": last_message,
+            }
+        )
+
+    return render(
+        request,
+        "conversations.html",
+        {
+            "conversations": items,
+        },
+    )
+
+
+@login_required
+def conversation_start_view(request, user_id):
+    UserModel = get_user_model()
+    other_user = get_object_or_404(UserModel, pk=user_id)
+    if other_user.pk == request.user.pk:
+        messages.error(request, "You cannot start a conversation with yourself.")
+        return redirect("conversations")
+
+    conversation = _get_or_create_conversation(request.user, other_user)
+    return redirect("conversation_detail", conversation_id=conversation.pk)
+
+
+@login_required
+def conversation_detail_view(request, conversation_id):
+    conversation = get_object_or_404(
+        Conversation.objects.select_related("user1", "user2"),
+        pk=conversation_id,
+    )
+    if request.user not in (conversation.user1, conversation.user2):
+        messages.error(request, "You are not part of this conversation.")
+        return redirect("conversations")
+
+    partner = conversation.user2 if conversation.user1_id == request.user.pk else conversation.user1
+
+    conversation.messages.filter(
+        receiver=request.user,
+        is_read=False,
+    ).update(is_read=True, read_at=timezone.now())
+
+    if request.method == "POST":
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.sender = request.user
+            message.receiver = partner
+            message.conversation = conversation
+            message.save()
+            conversation.last_message_at = message.sent_at
+            conversation.save(update_fields=["last_message_at"])
+            messages.success(request, "Message sent.")
+            return redirect("conversation_detail", conversation_id=conversation.pk)
+        messages.error(request, "Please correct the errors below.")
+    else:
+        form = MessageForm()
+
+    messages_qs = conversation.messages.select_related("sender").order_by("sent_at")
+
+    return render(
+        request,
+        "conversation_detail.html",
+        {
+            "conversation": conversation,
+            "partner": partner,
+            "messages": messages_qs,
+            "form": form,
+        },
+    )
 
 
 @login_required

@@ -47,6 +47,17 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
     path("matches/", views.matches_view, name="matches"),
     path("api/matches/top/", views.TopMatchesAPIView.as_view(), name="top-matches-api"),
+    path("conversations/", views.conversation_list_view, name="conversations"),
+    path(
+        "conversations/start/<int:user_id>/",
+        views.conversation_start_view,
+        name="conversation_start",
+    ),
+    path(
+        "conversations/<int:conversation_id>/",
+        views.conversation_detail_view,
+        name="conversation_detail",
+    ),
 ]
 
 if settings.DEBUG:
