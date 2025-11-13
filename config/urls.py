@@ -18,9 +18,14 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
 from kustay import views
+from kustay.api_views import ListingViewSet
+
+router = DefaultRouter()
+router.register("listings", ListingViewSet, basename="api-listings")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -58,6 +63,7 @@ urlpatterns = [
         views.conversation_detail_view,
         name="conversation_detail",
     ),
+    path("api/", include(router.urls)),
 ]
 
 if settings.DEBUG:
