@@ -24,6 +24,8 @@ from rest_framework.routers import DefaultRouter
 from kustay import views
 from kustay.api_views import ListingViewSet
 
+from kustay import api_views
+
 router = DefaultRouter()
 router.register("listings", ListingViewSet, basename="api-listings")
 
@@ -64,6 +66,14 @@ urlpatterns = [
         name="conversation_detail",
     ),
     path("api/", include(router.urls)),
+
+    ##new urls for frontend.
+    path('api/auth/signup/', api_views.signup_view),
+    path('api/auth/login/', api_views.login_view),
+    path('api/auth/logout/', api_views.logout_view),
+    path('api/auth/me/', api_views.me_view),
+    path('api/auth/forgot-password/', api_views.forgot_password_view),
+    path('api/auth/reset-password/', api_views.reset_password_view),
 ]
 
 if settings.DEBUG:
