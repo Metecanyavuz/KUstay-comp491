@@ -1,46 +1,30 @@
-import { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Navigation from './components/Navigation/Navigation';
+import HomePage from './components/HomePage/HomePage';
+import Login from './components/Login/Login';
+import Signup from './components/Signup/Signup';
+import ForgotPassword from './components/ForgotPassword/ForgotPassword';
+import ResetPassword from './components/ResetPassword/ResetPassword';
+import PrivateRoute from './components/PrivateRoute/PrivateRoute';
 import './App.css';
 
 function App() {
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetch('/api/listings/', { credentials: 'include' })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Request failed: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setListings(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
   return (
-    <div className="App">
-      <h1>Listings</h1>
-      {loading && <p>Loading…</p>}
-      {error && <p className="error">{error}</p>}
-      {!loading && !error && (
-        <ul className="listing-list">
-          {listings.map((listing) => (
-            <li key={listing.listing_id}>
-              <strong>{listing.title}</strong>
-              <span>{listing.rent_amount} ₺</span>
-              <small>{listing.neighborhood || listing.address}</small>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <Navigation />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

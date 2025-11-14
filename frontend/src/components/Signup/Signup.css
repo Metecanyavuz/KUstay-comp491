@@ -1,0 +1,36 @@
+/* Use the same styles as Login.css, plus these additions: */
+
+.select-input {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #eee;
+    border-radius: 10px;
+    font-size: 1rem;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  
+  .select-input:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+  
+  .hint {
+    color: #666;
+    font-size: 0.875rem;
+  }
+  
+  .success-message {
+    text-align: center;
+    padding: 2rem;
+  }
+  
+  .success-message h2 {
+    margin: 1rem 0 0.5rem;
+    color: #333;
+  }
+  
+  .success-message p {
+    color: #666;
+  }
