@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, Home, List, MessageCircle, User, LogOut, UserPlus, LogIn } from 'lucide-react';
+import { Menu, X, Home, MessageCircle, User, LogOut, UserPlus, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Navigation.css';
 
