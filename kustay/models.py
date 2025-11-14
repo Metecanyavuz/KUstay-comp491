@@ -3,7 +3,6 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 
-
 class User(AbstractUser):
     """Custom User model extending Django's AbstractUser"""
     USER_TYPE_CHOICES = [
@@ -25,13 +24,13 @@ class User(AbstractUser):
         return self.email
 
 
-class Profile(models.Model):
-    CLEANLINESS_CHOICES = [
+class Profile(models.Model): #user profile model
+    CLEANLINESS_CHOICES = [ #cleanliness level choices
         ("low", "Low"),
         ("medium", "Medium"),
         ("high", "High"),
     ]
-    SLEEP_SCHEDULE_CHOICES = [
+    SLEEP_SCHEDULE_CHOICES = [ #sleep schedule choices
         ("early_bird", "Early Bird"),
         ("night_owl", "Night Owl"),
         ("flexible", "Flexible"),
@@ -49,10 +48,10 @@ class Profile(models.Model):
 
     profile_id = models.AutoField(primary_key=True)
 
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="profile",
+    user = models.OneToOneField( #user field
+        settings.AUTH_USER_MODEL, #django user model
+        on_delete=models.CASCADE, #delete profile if user is deleted
+        related_name="profile", #related name for reverse lookup
     )
 
     sleep_schedule = models.CharField(

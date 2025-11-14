@@ -1,0 +1,472 @@
+.listings-page {
+  background: #f5f7fb;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+.listings-page .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8da2fb;
+}
+
+.listings-page .listings-hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  padding: 70px 20px;
+  text-align: center;
+}
+
+.listings-page .listings-hero-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.listings-page .listings-hero h1 {
+  font-size: 2.75rem;
+  margin: 1rem 0;
+  font-weight: 700;
+}
+
+.listings-page .listings-hero .subtitle {
+  opacity: 0.95;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.listings-page .listings-hero-search {
+  display: flex;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  padding: 0.5rem;
+  align-items: center;
+  backdrop-filter: blur(6px);
+}
+
+.listings-page .hero-search-input {
+  flex: 1;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+}
+
+.listings-page .hero-search-input input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1rem;
+  color: #111;
+}
+
+.listings-page .listings-hero-search button {
+  background: #fff;
+  color: #667eea;
+  border: none;
+  border-radius: 999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.listings-page .listings-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2.5rem;
+  max-width: 1200px;
+  margin: -60px auto 0;
+  padding: 0 20px;
+}
+
+.listings-page .filters-panel {
+  background: #fff;
+  border-radius: 20px;
+  padding: 1.75rem;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+  position: sticky;
+  top: 110px;
+  align-self: start;
+}
+
+.listings-page .filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.listings-page .filters-header h2 {
+  margin-top: 0.4rem;
+  font-size: 1.35rem;
+}
+
+.listings-page .filters-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.listings-page .filter-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+
+.listings-page .input-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+}
+
+.listings-page .input-with-icon input {
+  border: none;
+  background: transparent;
+  flex: 1;
+  font-size: 0.95rem;
+  color: #0f172a;
+  outline: none;
+}
+
+.listings-page .price-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.listings-page .price-inputs .input-with-icon {
+  width: 100%;
+}
+
+.listings-page .filter-group select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  background: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.listings-page .amenities-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.listings-page .amenity-chip {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  color: #475569;
+  transition: all 0.2s;
+}
+
+.listings-page .amenity-chip.active {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+
+.listings-page .filter-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.listings-page .apply-button {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.85rem;
+  font-weight: 600;
+}
+
+.listings-page .clear-button {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.listings-page .listings-results {
+  background: transparent;
+}
+
+.listings-page .results-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.listings-page .results-header h2 {
+  font-size: 1.75rem;
+  margin-top: 0.5rem;
+}
+
+.listings-page .results-subtitle {
+  color: #64748b;
+  margin-top: 0.35rem;
+}
+
+.listings-page .sort-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.listings-page .sort-control select {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  background: #fff;
+}
+
+.listings-page .active-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.listings-page .active-chip {
+  background: #e0e7ff;
+  color: #4338ca;
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.listings-page .active-chip.reset {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.listings-page .error-state {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.listings-page .loading-state {
+  background: #fff;
+  border-radius: 20px;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: #475569;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.listings-page .loading-state svg {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.listings-page .listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.listings-page .listing-card {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.listings-page .listing-card-image {
+  position: relative;
+  height: 200px;
+  background: #e2e8f0;
+}
+
+.listings-page .listing-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.listings-page .listing-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #cbd5f5;
+}
+
+.listings-page .listing-type-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(15, 23, 42, 0.8);
+  color: #fff;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.listings-page .listing-card-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.listings-page .listing-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.listings-page .listing-card-header h3 {
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.listings-page .listing-price {
+  color: #4338ca;
+  font-weight: 700;
+}
+
+.listings-page .listing-location {
+  display: flex;
+  gap: 0.35rem;
+  color: #475569;
+  font-size: 0.95rem;
+  align-items: center;
+}
+
+.listings-page .listing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.listings-page .listing-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.listings-page .listing-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.listings-page .amenity-pill {
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.listings-page .amenity-pill.muted {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.listings-page .listing-actions a {
+  color: #4338ca;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.listings-page .empty-state {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+  margin-top: 1rem;
+}
+
+.listings-page .empty-state button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 10px;
+  background: #4338ca;
+  color: #fff;
+  font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+  .listings-page .listings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .listings-page .filters-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .listings-page .listings-hero h1 {
+    font-size: 2.2rem;
+  }
+
+  .listings-page .listings-hero-search {
+    flex-direction: column;
+    border-radius: 20px;
+  }
+
+  .listings-page .hero-search-input {
+    border-radius: 12px;
+  }
+
+  .listings-page .price-inputs {
+    flex-direction: column;
+  }
+
+  .listings-page .results-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

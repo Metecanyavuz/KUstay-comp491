@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Conversations</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        .conversation { border-bottom: 1px solid #ddd; padding: 1rem 0; }
+        .conversation a { text-decoration: none; color: #333; }
+        small { color: #666; display: block; margin-top: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>Your Conversations</h1>
+    <p><a href="{% url 'home' %}">← Back to home</a></p>
+
+    {% if conversations %}
+        {% for item in conversations %}
+            <div class="conversation">
+                <a href="{% url 'conversation_detail' item.conversation.pk %}">
+                    <strong>{{ item.partner.get_full_name|default:item.partner.username }}</strong>
+                </a>
+                {% if item.last_message %}
+                    <small>
+                        Last message {{ item.last_message.sent_at|timesince }} ago<br>
+                        {% if item.last_message.sender == request.user %}
+                            You
+                        {% else %}
+                            {{ item.last_message.sender.get_full_name|default:item.last_message.sender.username }}
+                        {% endif %}
+                        : {{ item.last_message.message_text|truncatewords:12 }}
+                    </small>
+                {% else %}
+                    <small>No messages yet</small>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>You have no conversations yet.</p>
+    {% endif %}
+</body>
+</html>

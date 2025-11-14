@@ -18,9 +18,16 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
 from kustay import views
+from kustay.api_views import ListingViewSet
+
+from kustay import api_views
+
+router = DefaultRouter()
+router.register("listings", ListingViewSet, basename="api-listings")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -47,6 +54,26 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
     path("matches/", views.matches_view, name="matches"),
     path("api/matches/top/", views.TopMatchesAPIView.as_view(), name="top-matches-api"),
+    path("conversations/", views.conversation_list_view, name="conversations"),
+    path(
+        "conversations/start/<int:user_id>/",
+        views.conversation_start_view,
+        name="conversation_start",
+    ),
+    path(
+        "conversations/<int:conversation_id>/",
+        views.conversation_detail_view,
+        name="conversation_detail",
+    ),
+    path("api/", include(router.urls)),
+
+    ##new urls for frontend.
+    path('api/auth/signup/', api_views.signup_view),
+    path('api/auth/login/', api_views.login_view),
+    path('api/auth/logout/', api_views.logout_view),
+    path('api/auth/me/', api_views.me_view),
+    path('api/auth/forgot-password/', api_views.forgot_password_view),
+    path('api/auth/reset-password/', api_views.reset_password_view),
 ]
 
 if settings.DEBUG:

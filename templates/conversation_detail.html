@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Conversation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        .message { margin-bottom: 1rem; }
+        .message.you { text-align: right; }
+        .message .bubble {
+            display: inline-block;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            max-width: 70%;
+        }
+        .message.you .bubble { background: #d1e7dd; }
+        .message.other .bubble { background: #f1f1f1; }
+        form textarea { width: 100%; padding: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>Conversation with {{ partner.get_full_name|default:partner.username }}</h1>
+    <p><a href="{% url 'conversations' %}">← All conversations</a></p>
+
+    <div>
+        {% for message in messages %}
+            <div class="message {% if message.sender == request.user %}you{% else %}other{% endif %}">
+                <div class="bubble">
+                    <strong>
+                        {% if message.sender == request.user %}
+                            You
+                        {% else %}
+                            {{ message.sender.get_full_name|default:message.sender.username }}
+                        {% endif %}
+                    </strong>
+                    <p>{{ message.message_text|linebreaksbr }}</p>
+                    <small>{{ message.sent_at }}</small>
+                </div>
+            </div>
+        {% empty %}
+            <p>No messages yet.</p>
+        {% endfor %}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Send</button>
+    </form>
+</body>
+</html>

@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Listing, Profile
+from .models import Listing, Message, Profile
 
 
 class ProfileForm(forms.ModelForm):
@@ -82,3 +82,17 @@ class ListingForm(forms.ModelForm):
                 "Available rooms cannot exceed total rooms.",
             )
         return cleaned_data
+
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ["message_text"]
+        widgets = {
+            "message_text": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "placeholder": "Write your message…",
+                }
+            )
+        }
