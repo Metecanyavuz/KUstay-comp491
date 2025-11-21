@@ -44,4 +44,24 @@ class ListingSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        exclude = ["user"]
+        fields = [
+            'profile_id',
+            'first_name',
+            'last_name',
+            'phone_number',
+            'department',
+            'faculty',
+            'budget_min',
+            'budget_max',
+            'preferred_neighborhoods',
+            'move_in_date',
+            'smoker',
+            'pets',
+            'sleep_schedule',
+            'cleanliness_level',
+            'room_type_preference',
+            'lifestyle_notes',
+            'profile_photo_url',
+            'updated_at',
+        ]
+        read_only_fields = ['profile_id', 'updated_at']

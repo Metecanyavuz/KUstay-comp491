@@ -10,9 +10,7 @@ def refresh_matches_on_profile_save(sender, instance: Profile, **kwargs):
     Keep compatibility scores fresh whenever a profile is created or updated.
     """
     user = instance.user
-    if not user.is_verified:
-        return
-
+    
     from .utils.matching import calculate_matches_for_user
 
     calculate_matches_for_user(user)

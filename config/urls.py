@@ -68,10 +68,17 @@ urlpatterns = [
     path("api/", include(router.urls)),
 
     ##new urls for frontend.
+    path("api/", include(router.urls)),
+    path('api/csrf/', api_views.get_csrf_token, name='csrf'),  # CSRF endpoint
+    path('api/profile/', api_views.profile_view_api, name='api_profile'),  # Profile API
+    path('api/profile/<int:user_id>/', api_views.user_profile_view, name='api_user_profile'),  # View other user's profile
+
+
     path('api/auth/signup/', api_views.signup_view),
     path('api/auth/login/', api_views.login_view),
     path('api/auth/logout/', api_views.logout_view),
     path('api/auth/me/', api_views.me_view),
+    path('api/auth/verify-email/', api_views.verify_email_view),
     path('api/auth/forgot-password/', api_views.forgot_password_view),
     path('api/auth/reset-password/', api_views.reset_password_view),
 ]

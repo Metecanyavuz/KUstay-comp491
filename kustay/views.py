@@ -313,10 +313,11 @@ def matches_view(request):
     except Profile.DoesNotExist:
         user_profile = None
 
-    if not request.user.is_verified or user_profile is None:
+    # Check if profile exists - no need for verification anymore
+    if user_profile is None:
         messages.info(
             request,
-            "You need a verified profile before we can generate matches.",
+            "You need to complete your profile before we can generate matches.",
         )
         return redirect("profile")
 
@@ -368,10 +369,11 @@ class TopMatchesAPIView(APIView):
         except Profile.DoesNotExist:
             user_profile = None
 
-        if not user.is_verified or user_profile is None:
+        # Check if profile exists - no need for verification anymore
+        if user_profile is None:
             return Response(
                 {
-                    "detail": "Verified profile required to view matches.",
+                    "detail": "Profile required to view matches.",
                 },
                 status=400,
             )

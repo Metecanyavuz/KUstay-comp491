@@ -13,8 +13,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Listing, User
-from .serializers import ListingSerializer
+from .models import Listing, User, Profile
+from .serializers import ListingSerializer, ProfileSerializer 
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 import re
 
@@ -91,8 +92,8 @@ def signup_view(request):
         user_type=user_type
     )
     
-    # Send verification email
-    if user_type == 'KU_Student':
+    # Send verification email to KU students
+    if user_type == 'KU_Student' and (email.endswith('@ku.edu.tr') or email.endswith('@ku.edu')):
         send_verification_email(user)
     
     django_login(request, user)
@@ -114,14 +115,77 @@ def send_verification_email(user):
     user.verification_token = verification_token
     user.save()
     
+    # Frontend URL - change this to your production URL when deploying
     verify_url = f"http://localhost:3000/verify-email?token={verification_token}"
     
-    send_mail(
-        'Verify Your KUstay Account',
-        f'Click to verify: {verify_url}',
-        'noreply@kustay.com',
-        [user.email],
-    )
+    # Email subject
+    subject = 'Verify Your KUstay Account'
+    
+    # Plain text message
+    message = f'''
+Hello {user.username},
+
+Welcome to KUstay! Please verify your email address to access all features of the platform.
+
+Click the link below to verify your email:
+{verify_url}
+
+This link will expire in 24 hours.
+
+If you did not create this account, please ignore this email.
+
+Best regards,
+KUstay Team
+    '''
+    
+    # HTML message (optional but looks better)
+    html_message = f'''
+    <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #667eea;">Welcome to KUstay!</h2>
+                <p>Hello <strong>{user.username}</strong>,</p>
+                <p>Thank you for joining KUstay. Please verify your email address to access all features of the platform.</p>
+                <div style="margin: 30px 0;">
+                    <a href="{verify_url}" 
+                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              color: white;
+                              padding: 12px 30px;
+                              text-decoration: none;
+                              border-radius: 5px;
+                              display: inline-block;">
+                        Verify Email Address
+                    </a>
+                </div>
+                <p style="color: #666; font-size: 14px;">
+                    This link will expire in 24 hours.
+                </p>
+                <p style="color: #666; font-size: 14px;">
+                    If you did not create this account, please ignore this email.
+                </p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="color: #999; font-size: 12px;">
+                    Best regards,<br>
+                    KUstay Team
+                </p>
+            </div>
+        </body>
+    </html>
+    '''
+    
+    # Send email
+    try:
+        from django.core.mail import send_mail
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email='noreply@kustay.com',
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception as e:
+        print(f"Error sending verification email: {e}")
 
 
 @api_view(['POST'])
@@ -207,6 +271,30 @@ def forgot_password_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def verify_email_view(request):
+    token = request.data.get('token')
+    
+    try:
+        user = User.objects.get(verification_token=token)
+        
+        # Only KU students can be verified
+        if user.user_type == 'KU_Student' and (user.email.endswith('@ku.edu.tr') or user.email.endswith('@ku.edu')):
+            user.is_verified = True
+            user.verification_token = ''  # Clear the token
+            user.save()
+            
+            return Response({'message': 'Email verified successfully'}, status=200)
+        else:
+            return Response({'error': 'Invalid user type for verification'}, status=400)
+            
+    except User.DoesNotExist:
+        return Response({'error': 'Invalid or expired token'}, status=400)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def reset_password_view(request):
     token = request.data.get('token')
     password = request.data.get('password')
@@ -222,5 +310,81 @@ def reset_password_view(request):
         return Response({'message': 'Password reset successfully'}, status=200)
     except User.DoesNotExist:
         return Response({'error': 'Invalid or expired token'}, status=400)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+    
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def profile_view_api(request):
+    """Get or update user profile"""
+    user = request.user
+    
+    try:
+        profile = user.profile
+    except Profile.DoesNotExist:
+        profile = None
+    
+    if request.method == 'GET':
+        if profile:
+            serializer = ProfileSerializer(profile)
+            return Response(serializer.data)
+        else:
+            return Response({'error': 'Profile not found'}, status=404)
+    
+    elif request.method == 'POST':
+        # Get data from request
+        data = request.data.copy()
+        
+        if profile:
+            # Update existing profile
+            serializer = ProfileSerializer(profile, data=data, partial=True)
+        else:
+            # Create new profile
+            serializer = ProfileSerializer(data=data)
+        
+        if serializer.is_valid():
+            serializer.save(user=user)
+            
+            # KU students are NOT auto-verified anymore - they need email verification
+            # External students can NEVER be verified
+            
+            return Response(serializer.data, status=200)
+        else:
+            return Response({'error': serializer.errors}, status=400)
+
+
+@api_view(['GET'])
+@ensure_csrf_cookie
+@permission_classes([AllowAny])
+def get_csrf_token(request):
+    """Get CSRF token"""
+    return Response({'detail': 'CSRF cookie set'})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_profile_view(request, user_id):
+    """Get public profile of a specific user by user_id"""
+    try:
+        user = User.objects.get(pk=user_id)
+        profile = user.profile
+        
+        # Serialize profile data
+        profile_serializer = ProfileSerializer(profile)
+        profile_data = profile_serializer.data
+        
+        # Add user information
+        profile_data['user'] = {
+            'id': user.pk,
+            'email': user.email,
+            'user_type': user.user_type,
+            'is_verified': user.is_verified,
+        }
+        
+        return Response(profile_data, status=200)
+        
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+    except Profile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)

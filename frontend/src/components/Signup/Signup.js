@@ -60,10 +60,20 @@ function Signup() {
 
       if (response.ok) {
         setSuccess(true);
-        setTimeout(() => {
-          login(data.user);
-          window.location.href = '/profile';
-        }, 2000);
+        // Check if user is KU student
+        if (formData.userType === 'KU_Student') {
+          // Show verification message
+          setTimeout(() => {
+            login(data.user);
+            window.location.href = '/profile';
+          }, 3000);
+        } else {
+          // External students can continue directly
+          setTimeout(() => {
+            login(data.user);
+            window.location.href = '/profile';
+          }, 2000);
+        }
       } else {
         setError(data.error || 'Registration failed. Please try again.');
       }
@@ -81,7 +91,16 @@ function Signup() {
           <div className="success-message">
             <CheckCircle size={64} color="#10b981" />
             <h2>Account Created!</h2>
-            <p>Redirecting you to complete your profile...</p>
+            {formData.userType === 'KU_Student' ? (
+              <>
+                <p>Please check your KU email for verification link.</p>
+                <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '1rem' }}>
+                  You need to verify your email to access all features.
+                </p>
+              </>
+            ) : (
+              <p>Redirecting you to complete your profile...</p>
+            )}
           </div>
         </div>
       </div>

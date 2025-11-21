@@ -82,6 +82,8 @@
     top: 50%;
     transform: translateY(-50%);
     color: #999;
+    pointer-events: none;
+    z-index: 10;
   }
   
   .input-wrapper input {
@@ -91,6 +93,8 @@
     border-radius: 10px;
     font-size: 1rem;
     transition: border-color 0.2s;
+    background: white;
+    position: relative;
   }
   
   .input-wrapper input:focus {
@@ -169,5 +173,3 @@
       font-size: 1.5rem;
     }
   }
-
-  
