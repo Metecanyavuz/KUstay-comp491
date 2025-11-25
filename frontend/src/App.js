@@ -11,6 +11,7 @@ import PrivateRoute from './components/PrivateRoute/PrivateRoute';
 import Matches from './components/Matches/Matches';
 import Profile from './components/Profile/Profile';
 import UserProfile from './components/UserProfile/UserProfile';
+import Messages from './components/Messages/Messages';
 import './App.css';
 
 function App() {
@@ -45,6 +46,14 @@ function App() {
             <Route 
               path="/profile/:userId" 
               element={<UserProfile />} 
+            />
+            <Route
+              path="/conversations"
+              element={
+                <PrivateRoute>
+                  <Messages />
+                </PrivateRoute>
+              }
             />
           </Routes>
         </div>

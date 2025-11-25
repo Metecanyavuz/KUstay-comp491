@@ -8,13 +8,19 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from datetime import timedelta
 
-from rest_framework import permissions, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import mixins, permissions, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Listing, User, Profile
-from .serializers import ListingSerializer, ProfileSerializer 
+from .models import Conversation, Listing, Message, Profile, User
+from .serializers import (
+    ConversationDetailSerializer,
+    ConversationSerializer,
+    ListingSerializer,
+    MessageSerializer,
+    ProfileSerializer,
+)
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 import re
@@ -62,6 +68,68 @@ class ListingViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(amenities__icontains=term)
 
         return queryset
+
+
+class ConversationViewSet(mixins.ListModelMixin,
+                          mixins.RetrieveModelMixin,
+                          viewsets.GenericViewSet):
+    serializer_class = ConversationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return (
+            Conversation.objects.filter(Q(user1=user) | Q(user2=user))
+            .select_related("user1", "user2")
+            .prefetch_related("messages__sender")
+            .order_by("-last_message_at", "-created_at")
+        )
+
+    def get_serializer_class(self):
+        if self.action in ["retrieve", "messages"]:
+            return ConversationDetailSerializer
+        return ConversationSerializer
+
+    def create(self, request, *args, **kwargs):
+        partner_id = request.data.get("partner_id")
+        if not partner_id:
+            return Response({"error": "partner_id is required"}, status=400)
+
+        try:
+            partner = User.objects.get(pk=partner_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        if partner.pk == request.user.pk:
+            return Response({"error": "Cannot start a conversation with yourself"}, status=400)
+
+        user1, user2 = sorted([request.user, partner], key=lambda u: u.pk)
+        conversation, created = Conversation.objects.get_or_create(user1=user1, user2=user2)
+        serializer = self.get_serializer(conversation, context={"request": request})
+        return Response(serializer.data, status=201 if created else 200)
+
+    @action(detail=True, methods=["get", "post"])
+    def messages(self, request, pk=None):
+        conversation = self.get_object()
+        partner = conversation.user2 if conversation.user1_id == request.user.pk else conversation.user1
+
+        if request.method == "GET":
+            qs = conversation.messages.select_related("sender").order_by("sent_at")
+            data = MessageSerializer(qs, many=True, context={"request": request}).data
+            return Response(data)
+
+        serializer = MessageSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        message = Message.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            receiver=partner,
+            message_text=serializer.validated_data["message_text"],
+        )
+        conversation.last_message_at = message.sent_at
+        conversation.save(update_fields=["last_message_at"])
+        data = MessageSerializer(message, context={"request": request}).data
+        return Response(data, status=201)
 
 
 @api_view(['POST'])

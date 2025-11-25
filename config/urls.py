@@ -22,12 +22,13 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from kustay import views
-from kustay.api_views import ListingViewSet
+from kustay.api_views import ConversationViewSet, ListingViewSet
 
 from kustay import api_views
 
 router = DefaultRouter()
 router.register("listings", ListingViewSet, basename="api-listings")
+router.register("conversations", ConversationViewSet, basename="api-conversations")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
