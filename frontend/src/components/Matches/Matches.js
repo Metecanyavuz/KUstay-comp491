@@ -4,8 +4,7 @@ import {
   Users, 
   Heart, 
   MessageCircle, 
-  Home, 
-  Calendar,
+  Home,
   Moon,
   Sparkles,
   DollarSign,
@@ -14,6 +13,58 @@ import {
   Loader
 } from 'lucide-react';
 import './Matches.css';
+
+const CRITERIA_CONFIG = [
+  { key: 'budget', label: 'Budget Overlap', icon: DollarSign },
+  { key: 'sleep_schedule', label: 'Sleep Schedule', icon: Moon },
+  { key: 'cleanliness', label: 'Cleanliness Expectations', icon: Sparkles },
+  { key: 'location', label: 'Preferred Neighborhoods', icon: MapPin },
+  { key: 'room_type', label: 'Room Type Preference', icon: Home },
+  { key: 'lifestyle', label: 'Lifestyle Fit (Smoking/Pets)', icon: Users },
+];
+
+const normalizeScore = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(100, Math.round(numeric)));
+};
+
+const parseCriteria = (rawCriteria) => {
+  if (!rawCriteria) return {};
+  if (typeof rawCriteria === 'string') {
+    try {
+      return JSON.parse(rawCriteria);
+    } catch (err) {
+      console.error('Failed to parse matching criteria JSON', err);
+      return {};
+    }
+  }
+  return rawCriteria;
+};
+
+const getCommonCriteria = (matchingCriteria) => {
+  const criteria = parseCriteria(matchingCriteria);
+  return CRITERIA_CONFIG.flatMap((criterionConfig) => {
+    const criterion = criteria[criterionConfig.key];
+    if (!criterion) return [];
+
+    const score = Number(criterion.score ?? 0);
+    const weight = Number(criterion.weight ?? 0);
+    const ratio = weight > 0 ? score / weight : 0;
+
+    // Only surface items where at least ~50% of the weight is achieved.
+    if (!Number.isFinite(score) || score <= 0 || ratio < 0.5) {
+      return [];
+    }
+
+    return [
+      {
+        ...criterionConfig,
+        reason: criterion.reason || '',
+      },
+    ];
+  });
+};
 
 function Matches() {
   const { user } = useAuth();
@@ -62,8 +113,9 @@ function Matches() {
   };
 
   const filteredMatches = matches.filter((match) => {
-    if (filter === 'high') return match.compatibility_score >= 80;
-    if (filter === 'medium') return match.compatibility_score >= 60 && match.compatibility_score < 80;
+    const score = normalizeScore(match.compatibility_score);
+    if (filter === 'high') return score >= 80;
+    if (filter === 'medium') return score >= 60 && score < 80;
     return true;
   });
 
@@ -160,12 +212,16 @@ function Matches() {
         ) : (
           /* Matches Grid */
           <div className="matches-grid">
-            {filteredMatches.map((match) => (
-              <div key={match.user.id} className="match-card">
+            {filteredMatches.map((match) => {
+              const displayScore = normalizeScore(match.compatibility_score);
+              const commonCriteria = getCommonCriteria(match.matching_criteria);
+
+              return (
+                <div key={match.user.id} className="match-card">
                 {/* Score Badge */}
-                <div className={`score-badge ${getScoreColor(match.compatibility_score)}`}>
-                  <span className="score-number">{Math.round(match.compatibility_score)}%</span>
-                  <span className="score-label">{getScoreLabel(match.compatibility_score)}</span>
+                <div className={`score-badge ${getScoreColor(displayScore)}`}>
+                  <span className="score-number">{displayScore}%</span>
+                  <span className="score-label">{getScoreLabel(displayScore)}</span>
                 </div>
 
                 {/* User Info */}
@@ -190,34 +246,25 @@ function Matches() {
                     What You Have in Common
                   </h4>
                   <div className="criteria-list">
-                    {match.matching_criteria.budget_match && (
-                      <div className="criterion">
-                        <DollarSign size={16} />
-                        <span>Similar Budget</span>
-                      </div>
-                    )}
-                    {match.matching_criteria.sleep_schedule_match && (
-                      <div className="criterion">
-                        <Moon size={16} />
-                        <span>Compatible Sleep Schedule</span>
-                      </div>
-                    )}
-                    {match.matching_criteria.cleanliness_match && (
-                      <div className="criterion">
-                        <Sparkles size={16} />
-                        <span>Same Cleanliness Level</span>
-                      </div>
-                    )}
-                    {match.matching_criteria.neighborhood_match && (
-                      <div className="criterion">
-                        <MapPin size={16} />
-                        <span>Preferred Neighborhoods</span>
-                      </div>
-                    )}
-                    {match.matching_criteria.move_in_date_match && (
-                      <div className="criterion">
-                        <Calendar size={16} />
-                        <span>Similar Move-in Date</span>
+                    {commonCriteria.length > 0 ? (
+                      commonCriteria.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <div className="criterion" key={item.key}>
+                            <Icon size={16} />
+                            <div className="criterion-text">
+                              <span className="criterion-title">{item.label}</span>
+                              {item.reason && (
+                                <p className="criterion-reason">{item.reason}</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="criterion empty-criteria">
+                        <AlertCircle size={16} />
+                        <span>We need more profile info to show common ground.</span>
                       </div>
                     )}
                   </div>
@@ -237,7 +284,8 @@ function Matches() {
                   </a>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -250,7 +298,7 @@ function Matches() {
             <h3>How Matching Works</h3>
             <p>
               We calculate compatibility based on your preferences including budget, 
-              sleep schedule, cleanliness level, preferred neighborhoods, and move-in dates. 
+              sleep schedule, cleanliness level, preferred neighborhoods, room type, and lifestyle fit. 
               Higher scores mean better compatibility!
             </p>
           </div>

@@ -38,7 +38,7 @@ function VerifyEmail() {
         }, 2000);
       } else {
         setStatus('error');
-        setMessage(data.error || 'Verification failed');
+        setMessage(data.error || data.detail || 'Verification failed');
       }
     } catch (error) {
       setStatus('error');

@@ -7,6 +7,7 @@ import Login from './components/Login/Login';
 import Signup from './components/Signup/Signup';
 import ForgotPassword from './components/ForgotPassword/ForgotPassword';
 import ResetPassword from './components/ResetPassword/ResetPassword';
+import VerifyEmail from './components/VerifyEmail/VerifyEmail';
 import PrivateRoute from './components/PrivateRoute/PrivateRoute';
 import Matches from './components/Matches/Matches';
 import Profile from './components/Profile/Profile';
@@ -26,6 +27,7 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route 
               path="/matches" 
               element={

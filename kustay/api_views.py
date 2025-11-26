@@ -269,34 +269,48 @@ def forgot_password_view(request):
         return Response({'error': 'Failed to send email'}, status=500)
 
 
+@csrf_exempt  # Token in email link is the protection; allow calling without CSRF cookie.
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_email_view(request):
-    token = request.data.get('token')
-    
+    token = (request.data.get('token') or '').strip()
+
+    if not token:
+        return Response({'error': 'Missing token'}, status=400)
+
     try:
         user = User.objects.get(verification_token=token)
-        
-        # Only KU students can be verified
-        if user.user_type == 'KU_Student' and (user.email.endswith('@ku.edu.tr') or user.email.endswith('@ku.edu')):
-            user.is_verified = True
-            user.verification_token = ''  # Clear the token
-            user.save()
-            
-            return Response({'message': 'Email verified successfully'}, status=200)
-        else:
-            return Response({'error': 'Invalid user type for verification'}, status=400)
-            
     except User.DoesNotExist:
         return Response({'error': 'Invalid or expired token'}, status=400)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
+    # Normalize for safety
+    email_lower = (user.email or '').lower()
+    user_type = (user.user_type or '').lower()
 
+    # Only KU students can be verified
+    if user_type != 'ku_student' or not (email_lower.endswith('@ku.edu.tr') or email_lower.endswith('@ku.edu')):
+        return Response({'error': 'Invalid user type for verification'}, status=400)
+
+    # If already verified, be idempotent but clear any stale token.
+    if user.is_verified:
+        user.verification_token = ''
+        user.save(update_fields=['verification_token'])
+        return Response({'message': 'Email already verified'}, status=200)
+
+    user.is_verified = True
+    user.verification_token = ''  # Clear the token
+    user.save(update_fields=['is_verified', 'verification_token'])
+
+    return Response({'message': 'Email verified successfully'}, status=200)
+
+
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def reset_password_view(request):
-    token = request.data.get('token')
+    token = (request.data.get('token') or '').strip()
     password = request.data.get('password')
     
     try:

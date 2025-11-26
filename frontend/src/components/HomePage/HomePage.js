@@ -180,7 +180,7 @@ function HomePage() {
           <h2>Ready to Find Your Perfect Place?</h2>
           <p>Join thousands of students who've found their ideal roommates</p>
           <div className="cta-buttons">
-            <a href="/register" className="cta-button primary">Get Started</a>
+            <a href="/signup" className="cta-button primary">Get Started</a>
             <a href="/listings" className="cta-button secondary">Browse Listings</a>
           </div>
         </div>
