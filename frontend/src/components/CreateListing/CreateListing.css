@@ -1,5 +1,5 @@
 .create-listing-page {
-  background: #f5f7fb;
+  background: var(--ku-rose-100);
   min-height: 100vh;
   padding: 32px 16px 64px;
 }
@@ -22,12 +22,12 @@
 .create-listing-header h1 {
   margin: 0.35rem 0 0.3rem;
   font-size: 2rem;
-  color: #0f172a;
+  color: var(--ku-black);
 }
 
 .create-listing-header .lede {
   margin: 0;
-  color: #475569;
+  color: var(--ku-text-muted);
 }
 
 .create-listing-form {
@@ -50,7 +50,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  color: #0f172a;
+  color: var(--ku-black);
 }
 
 .form-grid {
@@ -72,18 +72,18 @@
   flex-direction: column;
   gap: 0.35rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--ku-black);
 }
 
 .form-field input,
 .form-field select,
 .form-field textarea {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--ku-border);
   border-radius: 12px;
   padding: 0.75rem 0.85rem;
   font-size: 0.95rem;
-  color: #0f172a;
-  background: #f8fafc;
+  color: var(--ku-black);
+  background: var(--ku-rose-100);
 }
 
 .form-field input[type="file"] {
@@ -99,10 +99,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--ku-border);
   border-radius: 12px;
   padding: 0.65rem 0.85rem;
-  background: #f8fafc;
+  background: var(--ku-rose-100);
 }
 
 .input-with-icon input {
@@ -130,8 +130,8 @@
 }
 
 .ghost-button {
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--ku-rose-100);
+  color: var(--ku-red-dark);
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -139,14 +139,14 @@
 
 .ghost-button.secondary {
   background: #fff;
-  color: #0f172a;
-  border: 1px solid #e2e8f0;
+  color: var(--ku-black);
+  border: 1px solid var(--ku-border);
 }
 
 .primary-button {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--ku-red), var(--ku-red-dark));
   color: #fff;
-  box-shadow: 0 12px 24px rgba(103, 113, 229, 0.25);
+  box-shadow: 0 12px 24px rgba(195, 17, 46, 0.25);
 }
 
 .primary-button:disabled,
@@ -156,9 +156,9 @@
 }
 
 .form-error {
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecdd3;
+  background: var(--ku-rose-200);
+  color: var(--ku-red-dark);
+  border: 1px solid var(--ku-red-light);
   border-radius: 12px;
   padding: 0.85rem 1rem;
 }
@@ -170,7 +170,7 @@
 }
 
 .form-hint {
-  color: #64748b;
+  color: var(--ku-text-muted);
   font-size: 0.85rem;
   margin-top: -0.25rem;
 }

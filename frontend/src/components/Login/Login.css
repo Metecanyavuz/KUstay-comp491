@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--ku-red) 0%, var(--ku-red-dark) 100%);
     padding: 2rem;
   }
   
@@ -24,7 +24,7 @@
   .auth-icon {
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--ku-red) 0%, var(--ku-red-dark) 100%);
     color: white;
     border-radius: 50%;
     display: flex;
@@ -36,17 +36,17 @@
   .auth-header h1 {
     font-size: 2rem;
     margin-bottom: 0.5rem;
-    color: #333;
+    color: var(--ku-black);
   }
   
   .auth-header p {
-    color: #666;
+    color: var(--ku-text-muted);
   }
   
-  .error-alert {
-    background: #fee;
-    border: 1px solid #fcc;
-    color: #c33;
+.error-alert {
+    background: var(--ku-rose-200);
+    border: 1px solid var(--ku-red-light);
+    color: var(--ku-red-dark);
     padding: 1rem;
     border-radius: 8px;
     display: flex;
@@ -69,7 +69,7 @@
   
   .form-group label {
     font-weight: 600;
-    color: #333;
+    color: var(--ku-black);
   }
   
   .input-wrapper {
@@ -81,7 +81,7 @@
     right: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #999;
+    color: var(--ku-text-muted);
     pointer-events: none;
     z-index: 10;
   }
@@ -89,7 +89,7 @@
   .input-wrapper input {
     width: 100%;
     padding: 1rem 3rem 1rem 1rem;
-    border: 2px solid #eee;
+    border: 2px solid var(--ku-border);
     border-radius: 10px;
     font-size: 1rem;
     transition: border-color 0.2s;
@@ -99,7 +99,7 @@
   
   .input-wrapper input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--ku-red);
   }
   
   .form-footer {
@@ -117,7 +117,7 @@
   }
   
   .forgot-link {
-    color: #667eea;
+    color: var(--ku-red);
     font-size: 0.875rem;
     text-decoration: none;
     font-weight: 600;
@@ -128,7 +128,7 @@
   }
   
   .auth-button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--ku-red) 0%, var(--ku-red-dark) 100%);
     color: white;
     border: none;
     padding: 1rem;
@@ -151,11 +151,11 @@
   .auth-switch {
     text-align: center;
     margin-top: 2rem;
-    color: #666;
+    color: var(--ku-text-muted);
   }
   
   .auth-switch a {
-    color: #667eea;
+    color: var(--ku-red);
     font-weight: 600;
     text-decoration: none;
   }

@@ -1,4 +1,19 @@
 /* Global Reset */
+:root {
+  --ku-red: #c3112e;
+  --ku-red-dark: #8f0d21;
+  --ku-red-bright: #e0485c;
+  --ku-red-light: #f8d7dc;
+  --ku-rose-100: #fff4f5;
+  --ku-rose-200: #fde7ea;
+  --ku-rose-300: #f8d4dc;
+  --ku-rose-400: #efbac4;
+  --ku-black: #231f20;
+  --ku-text-muted: #5c474a;
+  --ku-border: #e4c9cf;
+  --ku-shadow: rgba(35, 31, 32, 0.08);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -10,18 +25,30 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f9fafb;
+  background: var(--ku-rose-100);
+  color: var(--ku-black);
 }
 
 .App {
   min-height: 100vh;
+  background: var(--ku-rose-100);
 }
 
-/* You can add global styles here that apply to the whole app */
 a {
   text-decoration: none;
+  color: var(--ku-red);
+}
+
+a:hover {
+  color: var(--ku-red-dark);
 }
 
 button {
   cursor: pointer;
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--ku-red);
+  color: #fff;
 }
