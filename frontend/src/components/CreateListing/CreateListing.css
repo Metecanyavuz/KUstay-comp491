@@ -163,6 +163,18 @@
   padding: 0.85rem 1rem;
 }
 
+.form-error.inline {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.form-hint {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-top: -0.25rem;
+}
+
 @media (max-width: 768px) {
   .create-listing-header {
     flex-direction: column;
