@@ -97,12 +97,12 @@ function Signup() {
       <div className="auth-page">
         <div className="auth-container">
           <div className="success-message">
-            <CheckCircle size={64} color="#10b981" />
+            <CheckCircle size={64} color="#C3112E" />
             <h2>Account Created!</h2>
             {formData.userType === 'KU_Student' ? (
               <>
                 <p>Please check your KU email for verification link.</p>
-                <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '1rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--ku-text-muted)', marginTop: '1rem' }}>
                   You need to verify your email to access all features.
                 </p>
               </>

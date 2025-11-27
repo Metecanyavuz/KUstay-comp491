@@ -72,7 +72,7 @@ function ResetPassword() {
       <div className="auth-page">
         <div className="auth-container">
           <div className="success-message">
-            <CheckCircle size={64} color="#10b981" />
+            <CheckCircle size={64} color="#C3112E" />
             <h2>Password Reset!</h2>
             <p>Your password has been successfully reset.</p>
             <p className="hint-text">Redirecting you to login...</p>

@@ -559,8 +559,15 @@ function ListingsPage() {
           <div className="results-header">
             <div>
               <p className="eyebrow">Results</p>
-              <h2>
-                {loading ? 'Finding listings...' : `${filteredListings.length} places`}
+              <h2 className="results-count">
+                {loading ? (
+                  <span>Finding listings...</span>
+                ) : (
+                  <>
+                    <span className="count-number">{filteredListings.length}</span>
+                    <span className="count-label">places</span>
+                  </>
+                )}
               </h2>
               <p className="results-subtitle">
                 Showing active listings that match your filters

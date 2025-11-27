@@ -3,7 +3,7 @@
 .select-input {
     width: 100%;
     padding: 1rem;
-    border: 2px solid #eee;
+    border: 2px solid var(--ku-border);
     border-radius: 10px;
     font-size: 1rem;
     background: white;
@@ -13,11 +13,11 @@
   
   .select-input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--ku-red);
   }
   
   .hint {
-    color: #666;
+    color: var(--ku-text-muted);
     font-size: 0.875rem;
   }
   
@@ -28,9 +28,9 @@
   
   .success-message h2 {
     margin: 1rem 0 0.5rem;
-    color: #333;
+    color: var(--ku-black);
   }
   
   .success-message p {
-    color: #666;
+    color: var(--ku-text-muted);
   }

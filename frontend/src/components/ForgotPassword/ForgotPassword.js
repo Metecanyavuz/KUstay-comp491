@@ -41,7 +41,7 @@ function ForgotPassword() {
       <div className="auth-page">
         <div className="auth-container">
           <div className="success-message">
-            <CheckCircle size={64} color="#10b981" />
+            <CheckCircle size={64} color="#C3112E" />
             <h2>Check Your Email</h2>
             <p>We've sent password reset instructions to <strong>{email}</strong></p>
             <p className="hint-text">

@@ -59,7 +59,7 @@ function VerifyEmail() {
           
           {status === 'success' && (
             <>
-              <CheckCircle size={64} color="#10b981" />
+              <CheckCircle size={64} color="#C3112E" />
               <h2>Email Verified!</h2>
               <p>{message}</p>
             </>
@@ -67,7 +67,7 @@ function VerifyEmail() {
           
           {status === 'error' && (
             <>
-              <AlertCircle size={64} color="#ef4444" />
+              <AlertCircle size={64} color="#C3112E" />
               <h2>Verification Failed</h2>
               <p>{message}</p>
               <a href="/login" className="auth-button">Back to Login</a>
