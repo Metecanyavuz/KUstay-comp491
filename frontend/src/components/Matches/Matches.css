@@ -259,18 +259,40 @@
     gap: 0.75rem;
   }
   
-  .criterion {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: #333;
-    font-size: 0.875rem;
-  }
-  
-  .criterion svg {
-    color: #667eea;
-    flex-shrink: 0;
-  }
+.criterion {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #333;
+  font-size: 0.875rem;
+}
+
+.criterion svg {
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+.criterion-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.criterion-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.criterion-reason {
+  margin: 0;
+  color: #666;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.empty-criteria {
+  color: #666;
+}
   
   /* Action Buttons */
   .match-actions {
