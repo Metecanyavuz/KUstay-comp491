@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Home, MapPin, PlusCircle } from 'lucide-react';
 import { getCSRFToken } from '../../utils/csrf';
@@ -9,6 +9,8 @@ const defaultForm = {
   description: '',
   listing_type: 'apartment',
   room_type: 'private',
+  city: '',
+  district: '',
   address: '',
   neighborhood: '',
   rent_amount: '',
@@ -37,10 +39,104 @@ function CreateListing() {
   const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [provinceData, setProvinceData] = useState([]);
+  const [districtOptions, setDistrictOptions] = useState([]);
+  const [neighborhoodOptions, setNeighborhoodOptions] = useState([]);
+  const [locationError, setLocationError] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [neighborhoodLoading, setNeighborhoodLoading] = useState(false);
+  const [geocodeWarning, setGeocodeWarning] = useState('');
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchProvinces = async () => {
+      setLocationLoading(true);
+      setLocationError('');
+      try {
+        const response = await fetch('https://api.turkiyeapi.dev/v1/provinces', {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error('Unable to load provinces right now.');
+        }
+        const data = await response.json();
+        const items = data?.data || [];
+        setProvinceData(items);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error(err);
+          setLocationError('Şehir verisi alınamadı. Lütfen manuel girin veya tekrar deneyin.');
+        }
+      } finally {
+        setLocationLoading(false);
+      }
+    };
+    fetchProvinces();
+    return () => controller.abort();
+  }, []);
+
+  const handleCityChange = (value) => {
+    const selected = provinceData.find((p) => p.name === value);
+    const districts = selected?.districts || selected?.counties || [];
+    setForm((prev) => ({
+      ...prev,
+      city: value,
+      district: '',
+      neighborhood: '',
+    }));
+    setDistrictOptions(districts);
+    setNeighborhoodOptions([]);
+  };
+
+  const handleDistrictChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      district: value,
+      neighborhood: '',
+    }));
+    setNeighborhoodOptions([]);
+    if (value) {
+      const districtObj =
+        districtOptions.find((d) => d.name === value) ||
+        districtOptions.find((d) => d.district === value);
+      const districtId = districtObj?.id || districtObj?._id || districtObj?.districtId;
+      fetchNeighborhoods(value, districtId);
+    }
+  };
+
+  const fetchNeighborhoods = async (districtName, districtId) => {
+    setNeighborhoodLoading(true);
+    setLocationError('');
+    try {
+      const params = new URLSearchParams();
+      if (districtId) {
+        params.set('districtId', districtId);
+      } else {
+        params.set('district', districtName);
+      }
+      params.set('limit', '500');
+
+      const response = await fetch(
+        `https://api.turkiyeapi.dev/v1/neighborhoods?${params.toString()}`,
+      );
+      if (!response.ok) {
+        throw new Error('Mahalleler alınamadı');
+      }
+      const data = await response.json();
+      const items = data?.data || [];
+      setNeighborhoodOptions(items);
+    } catch (err) {
+      console.error(err);
+      setLocationError('Mahalle listesi yüklenemedi, elle yazabilirsiniz.');
+      setNeighborhoodOptions([]);
+    } finally {
+      setNeighborhoodLoading(false);
+    }
   };
 
   const handleFileChange = (event) => {
@@ -67,13 +163,34 @@ function CreateListing() {
       .map((item) => item.trim())
       .filter(Boolean);
 
+    const city = form.city.trim();
+    const district = form.district.trim();
+    const neighborhood = form.neighborhood.trim();
+    const street = form.address.trim();
+
+    if (!city || !district) {
+      setError('Please enter your city and district.');
+      return;
+    }
+
+    const composedAddress = [street, district, city].filter(Boolean).join(', ');
+
+    setGeocodeWarning('');
+
+    const coords = await geocodeAddress({
+      street,
+      neighborhood,
+      district,
+      city,
+    });
+
     const payload = new FormData();
     payload.append('title', form.title.trim());
     payload.append('description', form.description.trim());
     payload.append('listing_type', form.listing_type);
     payload.append('room_type', form.room_type);
-    payload.append('address', form.address.trim());
-    payload.append('neighborhood', form.neighborhood.trim());
+    payload.append('address', composedAddress);
+    payload.append('neighborhood', neighborhood || district || city);
     payload.append('rent_amount', form.rent_amount);
     payload.append('total_rooms', Number(form.total_rooms) || 1);
     payload.append('available_rooms', Number(form.available_rooms) || 1);
@@ -83,6 +200,11 @@ function CreateListing() {
 
     if (form.available_from) {
       payload.append('available_from', form.available_from);
+    }
+
+    if (coords) {
+      payload.append('latitude', coords.lat);
+      payload.append('longitude', coords.lng);
     }
 
     if (imageFile) {
@@ -101,11 +223,21 @@ function CreateListing() {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        const message =
-          data?.detail ||
-          data?.error ||
-          'Could not save listing. Please check your info and try again.';
+        let message = 'Could not save listing. Please check your info and try again.';
+        try {
+          const data = await response.json();
+          if (data?.detail) {
+            message = data.detail;
+          } else if (typeof data === 'object' && data !== null) {
+            const firstKey = Object.keys(data)[0];
+            const firstVal = Array.isArray(data[firstKey])
+              ? data[firstKey][0]
+              : data[firstKey];
+            message = `${firstKey}: ${firstVal}`;
+          }
+        } catch (parseErr) {
+          // keep default message
+        }
         throw new Error(message);
       }
 
@@ -120,6 +252,50 @@ function CreateListing() {
       setError(err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const geocodeAddress = async ({ street, neighborhood, district, city }) => {
+    const queryParts = [street, neighborhood, district, city, 'Türkiye'].filter(Boolean);
+    if (!queryParts.length) {
+      return null;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        q: queryParts.join(', '),
+        format: 'json',
+        limit: '1',
+        addressdetails: '0',
+        countrycodes: 'tr',
+      });
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+        {
+          headers: {
+            'User-Agent': 'KUstay/1.0 (listing creation)',
+          },
+        },
+      );
+      if (!response.ok) {
+        throw new Error('Geocode failed');
+      }
+      const results = await response.json();
+      if (!Array.isArray(results) || results.length === 0) {
+        setGeocodeWarning('Adres konumu bulunamadı; koordinatlar olmadan kaydedilecek.');
+        return null;
+      }
+      const { lat, lon } = results[0];
+      if (lat && lon) {
+        const round6 = (v) => Number.parseFloat(v).toFixed(6);
+        return { lat: round6(lat), lng: round6(lon) };
+      }
+      setGeocodeWarning('Adres konumu bulunamadı; koordinatlar olmadan kaydedilecek.');
+      return null;
+    } catch (error) {
+      console.warn('Geocoding failed', error);
+      setGeocodeWarning('Konum doğrulama başarısız; koordinatlar olmadan kaydedilecek.');
+      return null;
     }
   };
 
@@ -240,6 +416,71 @@ function CreateListing() {
 
             <div className="form-grid two">
               <label className="form-field">
+                <span>İl *</span>
+                <select
+                  name="city"
+                  value={form.city}
+                  onChange={(event) => handleCityChange(event.target.value)}
+                  required
+                >
+                  <option value="">İl seçin</option>
+                  {provinceData.map((province) => (
+                    <option key={province.id || province.name} value={province.name}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
+                {locationLoading && <small className="form-hint">Şehirler yükleniyor…</small>}
+                {locationError && <small className="form-error inline">{locationError}</small>}
+              </label>
+
+              <label className="form-field">
+                <span>İlçe *</span>
+                <select
+                  name="district"
+                  value={form.district}
+                  onChange={(event) => handleDistrictChange(event.target.value)}
+                  required
+                  disabled={!form.city}
+                >
+                  <option value="">İlçe seçin</option>
+                  {districtOptions.map((district) => (
+                    <option
+                      key={district.id || district._id || district.name}
+                      value={district.name}
+                    >
+                      {district.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="form-grid two">
+              <label className="form-field">
+                <span>Mahalle</span>
+                <select
+                  name="neighborhood"
+                  value={form.neighborhood}
+                  onChange={handleChange}
+                  disabled={!form.district}
+                >
+                  <option value="">Mahalle seçin</option>
+                  {neighborhoodOptions.map((hood) => (
+                    <option
+                      key={hood.id || hood._id || hood.name || hood}
+                      value={hood.name || hood.neighborhood || hood}
+                    >
+                      {hood.name || hood.neighborhood || hood}
+                    </option>
+                  ))}
+                </select>
+                {neighborhoodLoading && (
+                  <small className="form-hint">Mahalleler yükleniyor…</small>
+                )}
+              </label>
+
+              <label className="form-field">
                 <span>Address *</span>
                 <input
                   name="address"
@@ -248,17 +489,6 @@ function CreateListing() {
                   value={form.address}
                   onChange={handleChange}
                   required
-                />
-              </label>
-
-              <label className="form-field">
-                <span>Neighborhood</span>
-                <input
-                  name="neighborhood"
-                  type="text"
-                  placeholder="Area or neighborhood"
-                  value={form.neighborhood}
-                  onChange={handleChange}
                 />
               </label>
             </div>
@@ -328,6 +558,7 @@ function CreateListing() {
           </section>
 
           {error && <div className="form-error">{error}</div>}
+          {geocodeWarning && <div className="form-error inline">{geocodeWarning}</div>}
 
           <div className="form-actions">
             <button

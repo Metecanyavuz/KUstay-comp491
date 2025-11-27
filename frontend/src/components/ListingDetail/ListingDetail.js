@@ -9,7 +9,26 @@ import {
   MapPin,
   Users,
 } from 'lucide-react';
+import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import L from 'leaflet';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import { useAuth } from '../../context/AuthContext';
+import { getCSRFToken } from '../../utils/csrf';
 import './ListingDetail.css';
+import 'leaflet/dist/leaflet.css';
+
+const DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
 const LISTING_TYPE_LABELS = {
   apartment: 'Apartment',
@@ -74,10 +93,14 @@ const normalizeList = (value) => {
 function ListingDetail() {
   const { listingId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -138,6 +161,44 @@ function ListingDetail() {
     return uniqueUrls.slice(0, 6);
   }, [listing?.images, primaryImage]);
 
+  const listingCoords = useMemo(() => {
+    const lat = Number(listing?.latitude);
+    const lng = Number(listing?.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return { lat, lng };
+    }
+    return null;
+  }, [listing?.latitude, listing?.longitude]);
+
+  const handleDelete = async () => {
+    if (!listingId) return;
+    setShowConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const response = await fetch(`/api/listings/${listingId}/`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'X-CSRFToken': getCSRFToken() || '',
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Silme işlemi başarısız oldu.');
+      }
+      navigate('/listings');
+    } catch (err) {
+      console.error(err);
+      setDeleteError(err.message || 'Silme işlemi başarısız oldu.');
+    } finally {
+      setDeleting(false);
+      setShowConfirm(false);
+    }
+  };
+
   return (
     <div className="listing-detail-page">
       <div className="detail-shell">
@@ -153,6 +214,16 @@ function ListingDetail() {
           <Link to="/listings" className="ghost-button secondary">
             Browse listings
           </Link>
+          {user && (
+            <button
+              type="button"
+              className="ghost-button danger"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting…' : 'Delete listing'}
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -169,11 +240,12 @@ function ListingDetail() {
           </div>
         ) : listing ? (
           <>
-            <div className="detail-hero">
-              <div className="hero-image">
-                {primaryImage ? (
-                  <img src={primaryImage} alt={listing.title} />
-                ) : (
+            {deleteError && <div className="detail-error inline">{deleteError}</div>}
+              <div className="detail-hero">
+                <div className="hero-image">
+                  {primaryImage ? (
+                    <img src={primaryImage} alt={listing.title} />
+                  ) : (
                   <div className="hero-placeholder">
                     <Home size={36} />
                   </div>
@@ -292,6 +364,37 @@ function ListingDetail() {
                 )}
               </section>
 
+              {listingCoords && (
+                <section className="panel location-panel">
+                  <div className="panel-header">
+                    <h3>Location</h3>
+                  </div>
+                  <p className="location-text">
+                    <MapPin size={16} />
+                    <span>
+                      {listing.neighborhood ||
+                        listing.address ||
+                        'Location shared on request'}
+                    </span>
+                  </p>
+                  <div className="detail-map">
+                    <MapContainer
+                      center={[listingCoords.lat, listingCoords.lng]}
+                      zoom={15}
+                      scrollWheelZoom={false}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <Marker position={[listingCoords.lat, listingCoords.lng]}>
+                        <Popup>{listing.title}</Popup>
+                      </Marker>
+                    </MapContainer>
+                  </div>
+                </section>
+              )}
+
               {galleryImages.length > 0 && (
                 <section className="panel gallery">
                   <div className="panel-header">
@@ -305,6 +408,35 @@ function ListingDetail() {
                 </section>
               )}
             </div>
+
+            {showConfirm && (
+              <div className="confirm-overlay">
+                <div className="confirm-modal">
+                  <h3>Delete listing?</h3>
+                  <p>
+                    Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                  </p>
+                  <div className="confirm-actions">
+                    <button
+                      type="button"
+                      className="ghost-button secondary"
+                      onClick={() => setShowConfirm(false)}
+                      disabled={deleting}
+                    >
+                      Vazgeç
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button danger"
+                      onClick={confirmDelete}
+                      disabled={deleting}
+                    >
+                      {deleting ? 'Siliniyor…' : 'Evet, sil'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : null}
       </div>
