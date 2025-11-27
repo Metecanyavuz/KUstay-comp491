@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   BedDouble,
   Calendar,
@@ -415,6 +415,11 @@ function ListingsPage() {
             Filter by location, budget, or your must-have amenities. Every
             listing is created by a KUstay community member.
           </p>
+          <div className="listings-hero-actions">
+            <Link to="/listings/new" className="action-button">
+              List your place
+            </Link>
+          </div>
 
           <form className="listings-hero-search" onSubmit={handleApplyFilters}>
             <div className="hero-search-input">
@@ -683,9 +688,9 @@ function ListingsPage() {
                       )}
 
                       <div className="listing-actions">
-                        <a href={`/listings/${listing.listing_id}`}>
+                        <Link to={`/listings/${listing.listing_id}`}>
                           View details
-                        </a>
+                        </Link>
                       </div>
                     </div>
                   </article>

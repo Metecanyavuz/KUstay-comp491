@@ -3,6 +3,8 @@ import { AuthProvider } from './context/AuthContext';
 import Navigation from './components/Navigation/Navigation';
 import HomePage from './components/HomePage/HomePage';
 import ListingsPage from './components/ListingsPage/ListingsPage';
+import ListingDetail from './components/ListingDetail/ListingDetail';
+import CreateListing from './components/CreateListing/CreateListing';
 import Login from './components/Login/Login';
 import Signup from './components/Signup/Signup';
 import ForgotPassword from './components/ForgotPassword/ForgotPassword';
@@ -12,6 +14,7 @@ import PrivateRoute from './components/PrivateRoute/PrivateRoute';
 import Matches from './components/Matches/Matches';
 import Profile from './components/Profile/Profile';
 import UserProfile from './components/UserProfile/UserProfile';
+import Messages from './components/Messages/Messages';
 import './App.css';
 
 function App() {
@@ -23,6 +26,15 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/listings" element={<ListingsPage />} />
+            <Route path="/listings/:listingId" element={<ListingDetail />} />
+            <Route
+              path="/listings/new"
+              element={
+                <PrivateRoute>
+                  <CreateListing />
+                </PrivateRoute>
+              }
+            />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -47,6 +59,14 @@ function App() {
             <Route 
               path="/profile/:userId" 
               element={<UserProfile />} 
+            />
+            <Route
+              path="/conversations"
+              element={
+                <PrivateRoute>
+                  <Messages />
+                </PrivateRoute>
+              }
             />
           </Routes>
         </div>
