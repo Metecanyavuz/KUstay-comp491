@@ -210,25 +210,39 @@
     padding-right: 100px; /* Space for score badge */
   }
   
-  .match-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--ku-red) 0%, var(--ku-red-dark) 100%);
+.match-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ku-red) 0%, var(--ku-red-dark) 100%);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  
-  .match-info h3 {
-    font-size: 1.25rem;
-    margin-bottom: 0.25rem;
-    color: var(--ku-black);
-  }
+  font-size: 1.5rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+}
+
+.match-avatar.has-photo {
+  background: var(--ku-rose-100);
+  border-color: var(--ku-border);
+}
+
+.match-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.match-info h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+  color: var(--ku-black);
+}
   
   .match-department {
     color: var(--ku-text-muted);

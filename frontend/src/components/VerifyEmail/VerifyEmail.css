@@ -1,0 +1,67 @@
+/* Reuse shared auth styles */
+@import '../Login/Login.css';
+
+.verification-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 1rem 0.5rem;
+}
+
+.verification-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--ku-rose-300), var(--ku-rose-100));
+  color: var(--ku-red);
+}
+
+.verification-icon.success {
+  background: linear-gradient(135deg, #e2f5eb, #f5fff8);
+  color: #2f855a;
+}
+
+.verification-icon.error {
+  background: linear-gradient(135deg, var(--ku-rose-300), var(--ku-rose-100));
+  color: var(--ku-red);
+}
+
+.verification-message {
+  color: var(--ku-text-muted);
+  max-width: 360px;
+}
+
+.hint-text {
+  color: var(--ku-text-muted);
+  font-size: 0.9rem;
+}
+
+.verification-actions {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.verification-actions .auth-button {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid var(--ku-border);
+  border-top-color: var(--ku-red);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

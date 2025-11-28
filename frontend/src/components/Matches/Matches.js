@@ -16,6 +16,33 @@ import {
 import './Matches.css';
 import { getCSRFToken } from '../../utils/csrf';
 
+function MatchAvatar({ user }) {
+  const [imageError, setImageError] = useState(false);
+  const initials = (
+    user.first_name?.[0] ??
+    user.last_name?.[0] ??
+    user.username?.[0] ??
+    user.email?.[0] ??
+    '?'
+  ).toUpperCase();
+
+  const hasPhoto = user.profile_photo_url && !imageError;
+
+  return (
+    <div className={`match-avatar ${hasPhoto ? 'has-photo' : ''}`}>
+      {hasPhoto ? (
+        <img
+          src={user.profile_photo_url}
+          alt={`${user.first_name || 'User'}'s profile`}
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        initials
+      )}
+    </div>
+  );
+}
+
 const CRITERIA_CONFIG = [
   { key: 'budget', label: 'Budget Overlap', icon: DollarSign },
   { key: 'sleep_schedule', label: 'Sleep Schedule', icon: Moon },
@@ -244,13 +271,6 @@ function Matches() {
             {filteredMatches.map((match) => {
               const displayScore = normalizeScore(match.compatibility_score);
               const commonCriteria = getCommonCriteria(match.matching_criteria);
-              const avatarInitial = (
-                match.user.first_name?.[0] ??
-                match.user.last_name?.[0] ??
-                match.user.username?.[0] ??
-                match.user.email?.[0] ??
-                '?'
-              ).toUpperCase();
 
               return (
                 <div key={match.user.id} className="match-card">
@@ -262,9 +282,7 @@ function Matches() {
 
                 {/* User Info */}
                 <div className="match-header">
-                  <div className="match-avatar">
-                    {avatarInitial}
-                  </div>
+                  <MatchAvatar user={match.user} />
                   <div className="match-info">
                     <h3>{match.user.first_name} {match.user.last_name}</h3>
                     <p className="match-department">

@@ -1,3 +1,6 @@
+import json
+import os
+import uuid
 from decimal import Decimal, InvalidOperation
 
 from django.db.models import Q
@@ -6,10 +9,16 @@ from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
+from django.core.files.storage import default_storage
 from datetime import timedelta
 
 from rest_framework import mixins, permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -21,8 +30,6 @@ from .serializers import (
     MessageSerializer,
     ProfileSerializer,
 )
-from django.views.decorators.csrf import ensure_csrf_cookie
-
 import re
 
 
@@ -340,6 +347,7 @@ def forgot_password_view(request):
 @csrf_exempt  # Token in email link is the protection; allow calling without CSRF cookie.
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])  # Skip session auth to avoid CSRF requirement when already logged in
 def verify_email_view(request):
     token = (request.data.get('token') or '').strip()
 
@@ -400,7 +408,7 @@ def reset_password_view(request):
 def profile_view_api(request):
     """Get or update user profile"""
     user = request.user
-    
+
     try:
         profile = user.profile
     except Profile.DoesNotExist:
@@ -416,6 +424,44 @@ def profile_view_api(request):
     elif request.method == 'POST':
         # Get data from request
         data = request.data.copy()
+
+        # Normalize preferred neighborhoods (handle JSON string or comma-separated input)
+        preferred_neighborhoods = data.get("preferred_neighborhoods", [])
+        if isinstance(preferred_neighborhoods, str):
+            try:
+                preferred_neighborhoods = json.loads(preferred_neighborhoods)
+            except json.JSONDecodeError:
+                preferred_neighborhoods = [
+                    n.strip() for n in preferred_neighborhoods.split(",") if n.strip()
+                ]
+        data["preferred_neighborhoods"] = preferred_neighborhoods
+
+        # Normalize budgets and move_in_date
+        for field in ("budget_min", "budget_max"):
+            value = data.get(field)
+            data[field] = value if value not in (None, "") else 0
+
+        if not data.get("move_in_date"):
+            data["move_in_date"] = None
+
+        # Normalize boolean fields from form data
+        for field in ("smoker", "pets"):
+            value = data.get(field)
+            if isinstance(value, str):
+                data[field] = value.lower() in ("true", "1", "yes", "on")
+
+        # Handle profile photo upload
+        photo_file = request.FILES.get("profile_photo")
+        if photo_file:
+            allowed_types = {"image/jpeg", "image/png", "image/webp"}
+            if photo_file.content_type not in allowed_types:
+                return Response({"error": "Only JPG, PNG, or WEBP images are allowed."}, status=400)
+
+            ext = os.path.splitext(photo_file.name)[1] or ".jpg"
+            filename = f"profile_photos/{user.pk}_{uuid.uuid4().hex}{ext}"
+            saved_path = default_storage.save(filename, photo_file)
+            photo_url = request.build_absolute_uri(default_storage.url(saved_path))
+            data["profile_photo_url"] = photo_url
         
         if profile:
             # Update existing profile

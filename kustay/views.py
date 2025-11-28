@@ -406,10 +406,13 @@ class TopMatchesAPIView(APIView):
                 {
                     "user": {
                         "id": partner.pk,
+                        "email": partner.email,
+                        "username": partner.username,
                         "first_name": getattr(partner_profile, "first_name", partner.first_name),
                         "last_name": getattr(partner_profile, "last_name", partner.last_name),
                         "department": getattr(partner_profile, "department", ""),
                         "faculty": getattr(partner_profile, "faculty", ""),
+                        "profile_photo_url": getattr(partner_profile, "profile_photo_url", ""),
                     },
                     "compatibility_score": float(match.compatibility_score),
                     "matching_criteria": match.matching_criteria or {},

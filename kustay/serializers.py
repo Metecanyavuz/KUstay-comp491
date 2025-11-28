@@ -131,6 +131,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             "first_name": getattr(profile, "first_name", partner.first_name),
             "last_name": getattr(profile, "last_name", partner.last_name),
             "profile_photo_url": getattr(profile, "profile_photo_url", ""),
+            "is_verified": partner.is_verified,
         }
 
     def get_partner(self, obj):

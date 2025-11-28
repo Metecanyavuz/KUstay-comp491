@@ -27,12 +27,43 @@ function UserProfile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [photoError, setPhotoError] = useState(false);
 
   useEffect(() => {
     if (userId) {
       fetchUserProfile();
     }
   }, [userId]);
+
+  useEffect(() => {
+    setPhotoError(false);
+  }, [profile?.profile_photo_url]);
+
+  const getInitials = () => {
+    if (!profile) return 'U';
+    const firstInitial = profile.first_name?.[0] || '';
+    const lastInitial = profile.last_name?.[0] || '';
+    const initials = `${firstInitial}${lastInitial}`.trim();
+    return initials || profile.user?.email?.[0]?.toUpperCase() || 'U';
+  };
+
+  const renderAvatar = () => {
+    const hasPhoto = profile?.profile_photo_url && !photoError;
+
+    return (
+      <div className={`user-avatar ${hasPhoto ? 'has-photo' : ''}`}>
+        {hasPhoto ? (
+          <img
+            src={profile.profile_photo_url}
+            alt={`${profile.first_name || 'User'}'s profile`}
+            onError={() => setPhotoError(true)}
+          />
+        ) : (
+          getInitials()
+        )}
+      </div>
+    );
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -133,9 +164,7 @@ function UserProfile() {
         {/* Header */}
         <div className="profile-header">
           <div className="header-content">
-            <div className="user-avatar">
-              {profile.first_name?.[0] || profile.user?.email?.[0]?.toUpperCase() || 'U'}
-            </div>
+            {renderAvatar()}
             <div className="user-info">
               <h1>{profile.first_name && profile.last_name 
                 ? `${profile.first_name} ${profile.last_name}` 

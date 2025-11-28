@@ -1,7 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { CheckCircle } from 'lucide-react';
 import './Messages.css';
 import { getCSRFToken } from '../../utils/csrf';
+
+function PartnerAvatar({ partner, size = 40 }) {
+  const [error, setError] = useState(false);
+  const initials = (
+    partner.first_name?.[0] ??
+    partner.last_name?.[0] ??
+    partner.username?.[0] ??
+    partner.email?.[0] ??
+    '?'
+  ).toUpperCase();
+
+  const hasPhoto = partner.profile_photo_url && !error;
+
+  return (
+    <div
+      className={`partner-avatar ${hasPhoto ? 'has-photo' : ''}`}
+      style={{ width: size, height: size }}
+    >
+      {hasPhoto ? (
+        <img
+          src={partner.profile_photo_url}
+          alt={`${partner.first_name || 'User'}'s avatar`}
+          onError={() => setError(true)}
+        />
+      ) : (
+        <span>{initials}</span>
+      )}
+    </div>
+  );
+}
 
 function Messages() {
   const location = useLocation();
@@ -12,10 +43,18 @@ function Messages() {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState('');
+  const messagesListRef = useRef(null);
 
   useEffect(() => {
     fetchConversations();
   }, []);
+
+  useEffect(() => {
+    // Snap directly to the latest message after messages load/change
+    if (!loadingMessages && messagesListRef.current) {
+      messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
+    }
+  }, [messages, loadingMessages, selectedConversation]);
 
   const fetchConversations = async () => {
     setLoadingConversations(true);
@@ -127,14 +166,19 @@ function Messages() {
                 }
                 onClick={() => selectConversation(convo)}
               >
-                <div className="partner-name">
-                  {convo.partner.first_name || convo.partner.username}
+                <div className="conversation-meta">
+                  <PartnerAvatar partner={convo.partner} size={44} />
+                  <div className="conversation-text">
+                    <div className="partner-name">
+                      {convo.partner.first_name || convo.partner.username}
+                    </div>
+                    {convo.last_message ? (
+                      <p className="preview">{convo.last_message.message_text}</p>
+                    ) : (
+                      <p className="preview muted">No messages yet</p>
+                    )}
+                  </div>
                 </div>
-                {convo.last_message ? (
-                  <p className="preview">{convo.last_message.message_text}</p>
-                ) : (
-                  <p className="preview muted">No messages yet</p>
-                )}
               </li>
             ))}
           </ul>
@@ -146,12 +190,23 @@ function Messages() {
         {selectedConversation ? (
           <>
             <div className="conversation-header">
-              <h2>
-                {selectedConversation.partner.first_name || selectedConversation.partner.username}
-              </h2>
+              <PartnerAvatar partner={selectedConversation.partner} size={48} />
+              <div>
+                <h2>
+                  {selectedConversation.partner.first_name || selectedConversation.partner.username}
+                  {selectedConversation.partner.is_verified && (
+                    <span className="verification-icon" title="Verified KU Student">
+                      <CheckCircle size={16} />
+                    </span>
+                  )}
+                </h2>
+                {selectedConversation.partner.email && (
+                  <p className="header-sub">{selectedConversation.partner.email}</p>
+                )}
+              </div>
             </div>
 
-            <div className="messages-list">
+            <div className="messages-list" ref={messagesListRef}>
               {loadingMessages ? (
                 <p>Loading messages...</p>
               ) : messages.length === 0 ? (
@@ -162,6 +217,9 @@ function Messages() {
                     key={msg.message_id}
                     className={`message-bubble ${msg.is_own ? 'own' : ''}`}
                   >
+                    {!msg.is_own && selectedConversation?.partner && (
+                      <PartnerAvatar partner={selectedConversation.partner} size={32} />
+                    )}
                     <div className="bubble-content">
                       <p>{msg.message_text}</p>
                       <span>{new Date(msg.sent_at).toLocaleString()}</span>

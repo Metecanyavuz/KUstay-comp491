@@ -30,6 +30,9 @@ function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [photoError, setPhotoError] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -56,6 +59,71 @@ function Profile() {
     }
   }, [user]);
 
+  useEffect(() => {
+    setPhotoError(false);
+  }, [formData.profile_photo_url, photoPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
+
+  const getInitials = () => {
+    const firstInitial = formData.first_name?.[0] || '';
+    const lastInitial = formData.last_name?.[0] || '';
+    const initials = `${firstInitial}${lastInitial}`.trim();
+    return initials || user.email[0].toUpperCase();
+  };
+
+  const renderAvatar = () => {
+    const hasPreview = !!photoPreview;
+    const hasPhotoUrl = formData.profile_photo_url && !photoError;
+    const hasPhoto = hasPreview || hasPhotoUrl;
+    const imageSrc = hasPreview ? photoPreview : hasPhotoUrl ? formData.profile_photo_url : '';
+
+    return (
+      <div className={`user-avatar ${hasPhoto ? 'has-photo' : ''}`}>
+        {hasPhoto ? (
+          <img
+            src={imageSrc}
+            alt="Profile"
+            onError={() => {
+              if (!hasPreview) {
+                setPhotoError(true);
+              }
+            }}
+          />
+        ) : (
+          getInitials()
+        )}
+      </div>
+    );
+  };
+
+  const mapProfileToForm = (data = {}) => ({
+    first_name: data.first_name || '',
+    last_name: data.last_name || '',
+    phone_number: data.phone_number || '',
+    department: data.department || '',
+    faculty: data.faculty || '',
+    budget_min: data.budget_min || '',
+    budget_max: data.budget_max || '',
+    preferred_neighborhoods: Array.isArray(data.preferred_neighborhoods)
+      ? data.preferred_neighborhoods.join(', ')
+      : '',
+    move_in_date: data.move_in_date || '',
+    smoker: data.smoker || false,
+    pets: data.pets || false,
+    sleep_schedule: data.sleep_schedule || 'flexible',
+    cleanliness_level: data.cleanliness_level || 'medium',
+    room_type_preference: data.room_type_preference || 'private',
+    lifestyle_notes: data.lifestyle_notes || '',
+    profile_photo_url: data.profile_photo_url || '',
+  });
+
   const fetchProfile = async () => {
     try {
       const response = await fetch('/api/profile/', {
@@ -68,26 +136,10 @@ function Profile() {
         setProfile(data);
         
         // Set form data with fetched profile
-        setFormData({
-          first_name: data.first_name || '',
-          last_name: data.last_name || '',
-          phone_number: data.phone_number || '',
-          department: data.department || '',
-          faculty: data.faculty || '',
-          budget_min: data.budget_min || '',
-          budget_max: data.budget_max || '',
-          preferred_neighborhoods: Array.isArray(data.preferred_neighborhoods) 
-            ? data.preferred_neighborhoods.join(', ') 
-            : '',
-          move_in_date: data.move_in_date || '',
-          smoker: data.smoker || false,
-          pets: data.pets || false,
-          sleep_schedule: data.sleep_schedule || 'flexible',
-          cleanliness_level: data.cleanliness_level || 'medium',
-          room_type_preference: data.room_type_preference || 'private',
-          lifestyle_notes: data.lifestyle_notes || '',
-          profile_photo_url: data.profile_photo_url || '',
-        });
+        setFormData(mapProfileToForm(data));
+        setPhotoFile(null);
+        setPhotoPreview('');
+        setPhotoError(false);
         
         setIsEditing(false);
       } else if (response.status === 404) {
@@ -114,6 +166,32 @@ function Profile() {
     }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview);
+      }
+      setPhotoFile(null);
+      setPhotoPreview('');
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError('Profile photo must be under 5MB.');
+      return;
+    }
+
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview);
+    }
+
+    setPhotoFile(file);
+    setPhotoError(false);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -122,32 +200,48 @@ function Profile() {
   
     try {
       // Parse preferred_neighborhoods from comma-separated string to array
-      const dataToSend = {
-        ...formData,
-        preferred_neighborhoods: formData.preferred_neighborhoods
-          .split(',')
-          .map(n => n.trim())
-          .filter(n => n),
-        // Convert empty date to null
-        move_in_date: formData.move_in_date || null,
-        // Convert string numbers to actual numbers
-        budget_min: parseFloat(formData.budget_min) || 0,
-        budget_max: parseFloat(formData.budget_max) || 0,
-      };
+      const neighborhoods = formData.preferred_neighborhoods
+        .split(',')
+        .map(n => n.trim())
+        .filter(n => n);
+
+      const dataToSend = new FormData();
+      dataToSend.append('first_name', formData.first_name);
+      dataToSend.append('last_name', formData.last_name);
+      dataToSend.append('phone_number', formData.phone_number);
+      dataToSend.append('department', formData.department);
+      dataToSend.append('faculty', formData.faculty);
+      dataToSend.append('budget_min', formData.budget_min || 0);
+      dataToSend.append('budget_max', formData.budget_max || 0);
+      dataToSend.append('preferred_neighborhoods', JSON.stringify(neighborhoods));
+      dataToSend.append('move_in_date', formData.move_in_date || '');
+      dataToSend.append('smoker', formData.smoker);
+      dataToSend.append('pets', formData.pets);
+      dataToSend.append('sleep_schedule', formData.sleep_schedule);
+      dataToSend.append('cleanliness_level', formData.cleanliness_level);
+      dataToSend.append('room_type_preference', formData.room_type_preference);
+      dataToSend.append('lifestyle_notes', formData.lifestyle_notes);
+      dataToSend.append('profile_photo_url', formData.profile_photo_url);
+      if (photoFile) {
+        dataToSend.set('profile_photo', photoFile);
+      }
   
       const response = await fetch('/api/profile/', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'X-CSRFToken': getCSRFToken() || '',
         },
         credentials: 'include',
-        body: JSON.stringify(dataToSend),
+        body: dataToSend,
       });
   
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
+        setFormData(mapProfileToForm(data));
+        setPhotoFile(null);
+        setPhotoPreview('');
+        setPhotoError(false);
         setSuccessMessage('Profile saved successfully!');
         setIsEditing(false);
         await checkAuth();
@@ -206,9 +300,7 @@ function Profile() {
         {/* Header */}
         <div className="profile-header">
           <div className="header-content">
-            <div className="user-avatar">
-              {formData.first_name?.[0] || user.email[0].toUpperCase()}
-            </div>
+            {renderAvatar()}
             <div className="user-info">
               <h1>{formData.first_name && formData.last_name 
                 ? `${formData.first_name} ${formData.last_name}` 
@@ -313,6 +405,35 @@ function Profile() {
                     disabled
                     className="disabled-input"
                   />
+                </div>
+              </div>
+
+              <div className="photo-upload">
+                <label htmlFor="profile_photo_url">Profile Photo</label>
+                <div className="photo-input">
+                  <div className="photo-preview">
+                    {renderAvatar()}
+                  </div>
+                  <div className="photo-fields">
+                    <label className="file-input-label">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                      />
+                      Choose a photo
+                    </label>
+                    <div className="divider-text">or</div>
+                    <input
+                      type="url"
+                      id="profile_photo_url"
+                      name="profile_photo_url"
+                      value={formData.profile_photo_url}
+                      onChange={handleChange}
+                      placeholder="https://example.com/photo.jpg"
+                    />
+                    <small>Upload JPG, PNG, or WEBP (max 5MB) or paste a direct link.</small>
+                  </div>
                 </div>
               </div>
 
@@ -499,7 +620,15 @@ function Profile() {
                 <button
                   type="button"
                   className="cancel-button"
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => {
+                    setIsEditing(false);
+                    if (profile) {
+                      setFormData(mapProfileToForm(profile));
+                      setPhotoFile(null);
+                      setPhotoPreview('');
+                      setPhotoError(false);
+                    }
+                  }}
                 >
                   <X size={20} />
                   Cancel

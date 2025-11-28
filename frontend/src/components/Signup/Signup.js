@@ -97,7 +97,7 @@ function Signup() {
       <div className="auth-page">
         <div className="auth-container">
           <div className="success-message">
-            <CheckCircle size={64} color="#C3112E" />
+            <CheckCircle size={64} color="#2f855a" />
             <h2>Account Created!</h2>
             {formData.userType === 'KU_Student' ? (
               <>
