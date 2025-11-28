@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Users, 
@@ -13,6 +14,7 @@ import {
   Loader
 } from 'lucide-react';
 import './Matches.css';
+import { getCSRFToken } from '../../utils/csrf';
 
 const CRITERIA_CONFIG = [
   { key: 'budget', label: 'Budget Overlap', icon: DollarSign },
@@ -68,6 +70,7 @@ const getCommonCriteria = (matchingCriteria) => {
 
 function Matches() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -119,8 +122,34 @@ function Matches() {
     return true;
   });
 
-  const startConversation = (userId) => {
-    window.location.href = `/conversations/start/${userId}`;
+  const startConversation = async (userId) => {
+    try {
+      const csrfToken = getCSRFToken();
+      const response = await fetch('/api/conversations/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken || '',
+        },
+        body: JSON.stringify({ partner_id: userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to start conversation. Please try again.');
+      }
+
+      const data = await response.json();
+      const conversationId = data.conversation_id || data.id;
+      if (conversationId) {
+        navigate(`/conversations?open=${conversationId}`);
+      } else {
+        navigate('/conversations');
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Unable to start conversation.');
+    }
   };
 
   if (!user) {
@@ -215,6 +244,13 @@ function Matches() {
             {filteredMatches.map((match) => {
               const displayScore = normalizeScore(match.compatibility_score);
               const commonCriteria = getCommonCriteria(match.matching_criteria);
+              const avatarInitial = (
+                match.user.first_name?.[0] ??
+                match.user.last_name?.[0] ??
+                match.user.username?.[0] ??
+                match.user.email?.[0] ??
+                '?'
+              ).toUpperCase();
 
               return (
                 <div key={match.user.id} className="match-card">
@@ -227,7 +263,7 @@ function Matches() {
                 {/* User Info */}
                 <div className="match-header">
                   <div className="match-avatar">
-                    {match.user.first_name?.[0] || match.user.email[0].toUpperCase()}
+                    {avatarInitial}
                   </div>
                   <div className="match-info">
                     <h3>{match.user.first_name} {match.user.last_name}</h3>

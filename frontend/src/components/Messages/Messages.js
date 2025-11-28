@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import './Messages.css';
 import { getCSRFToken } from '../../utils/csrf';
 
 function Messages() {
+  const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -27,7 +29,20 @@ function Messages() {
       const data = await response.json();
       setConversations(data);
       if (data.length > 0) {
-        selectConversation(data[0]);
+        const params = new URLSearchParams(location.search);
+        const openId = Number(params.get('open'));
+        const target =
+          Number.isFinite(openId) && openId > 0
+            ? data.find((convo) => convo.conversation_id === openId)
+            : null;
+        if (target) {
+          selectConversation(target);
+        } else {
+          selectConversation(data[0]);
+        }
+      } else {
+        setSelectedConversation(null);
+        setMessages([]);
       }
     } catch (err) {
       setError(err.message);
