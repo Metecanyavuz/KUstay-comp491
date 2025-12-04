@@ -19,6 +19,7 @@ from rest_framework.decorators import (
     authentication_classes,
     permission_classes,
 )
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -77,11 +78,14 @@ class ListingViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class ConversationViewSet(mixins.ListModelMixin,
-                          mixins.RetrieveModelMixin,
-                          viewsets.GenericViewSet):
+class ConversationViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = ConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         user = self.request.user
@@ -125,13 +129,33 @@ class ConversationViewSet(mixins.ListModelMixin,
             data = MessageSerializer(qs, many=True, context={"request": request}).data
             return Response(data)
 
-        serializer = MessageSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
+        message_text = (request.data.get("message_text") or "").strip()
+        attachment_file = request.FILES.get("attachment")
+
+        if not message_text and not attachment_file:
+            return Response(
+                {"error": "Please enter a message or attach a file."},
+                status=400,
+            )
+
+        attachment_type = Message.AttachmentType.TEXT
+        attachment_name = ""
+        if attachment_file:
+            content_type = attachment_file.content_type or ""
+            if content_type.startswith("image/"):
+                attachment_type = Message.AttachmentType.IMAGE
+            else:
+                attachment_type = Message.AttachmentType.FILE
+            attachment_name = attachment_file.name[:255]
+
         message = Message.objects.create(
             conversation=conversation,
             sender=request.user,
             receiver=partner,
-            message_text=serializer.validated_data["message_text"],
+            message_text=message_text,
+            attachment=attachment_file,
+            attachment_original_name=attachment_name,
+            attachment_type=attachment_type,
         )
         conversation.last_message_at = message.sent_at
         conversation.save(update_fields=["last_message_at"])

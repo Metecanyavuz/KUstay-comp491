@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import './Messages.css';
 import { getCSRFToken } from '../../utils/csrf';
@@ -40,10 +40,15 @@ function Messages() {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [drafts, setDrafts] = useState({});
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState('');
+  const [attachment, setAttachment] = useState(null);
+  const [attachmentPreview, setAttachmentPreview] = useState('');
+  const [showMediaPanel, setShowMediaPanel] = useState(false);
   const messagesListRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchConversations();
@@ -55,6 +60,14 @@ function Messages() {
       messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
     }
   }, [messages, loadingMessages, selectedConversation]);
+
+  useEffect(() => {
+    return () => {
+      if (attachmentPreview) {
+        URL.revokeObjectURL(attachmentPreview);
+      }
+    };
+  }, [attachmentPreview]);
 
   const fetchConversations = async () => {
     setLoadingConversations(true);
@@ -90,8 +103,23 @@ function Messages() {
     }
   };
 
+  const mediaMessages = useMemo(
+    () => messages.filter((msg) => msg.has_attachment),
+    [messages]
+  );
+
   const selectConversation = async (conversation) => {
     setSelectedConversation(conversation);
+    setShowMediaPanel(false);
+    setAttachment(null);
+    if (attachmentPreview) {
+      URL.revokeObjectURL(attachmentPreview);
+      setAttachmentPreview('');
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setNewMessage(drafts[conversation.conversation_id] || '');
     await fetchMessages(conversation.conversation_id);
   };
 
@@ -113,23 +141,89 @@ function Messages() {
     }
   };
 
+  const reorderConversations = (updatedConversation) => {
+    setConversations((prev) => {
+      const mapped = prev.map((convo) =>
+        convo.conversation_id === updatedConversation.conversation_id ? updatedConversation : convo
+      );
+      return mapped.sort((a, b) => {
+        const aTime = new Date(a.last_message_at || a.created_at).getTime();
+        const bTime = new Date(b.last_message_at || b.created_at).getTime();
+        return bTime - aTime;
+      });
+    });
+  };
+
+  const handleDraftChange = (value) => {
+    setNewMessage(value);
+    if (selectedConversation) {
+      setDrafts((prev) => ({
+        ...prev,
+        [selectedConversation.conversation_id]: value,
+      }));
+    }
+  };
+
+  const handleAttachmentChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setAttachment(null);
+      if (attachmentPreview) {
+        URL.revokeObjectURL(attachmentPreview);
+        setAttachmentPreview('');
+      }
+      return;
+    }
+    setAttachment(file);
+    if (file.type?.startsWith('image/')) {
+      if (attachmentPreview) {
+        URL.revokeObjectURL(attachmentPreview);
+      }
+      setAttachmentPreview(URL.createObjectURL(file));
+    } else if (attachmentPreview) {
+      URL.revokeObjectURL(attachmentPreview);
+      setAttachmentPreview('');
+    } else {
+      setAttachmentPreview('');
+    }
+  };
+
+  const clearAttachment = () => {
+    setAttachment(null);
+    if (attachmentPreview) {
+      URL.revokeObjectURL(attachmentPreview);
+      setAttachmentPreview('');
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) {
+    if (!selectedConversation) {
+      return;
+    }
+    if (!newMessage.trim() && !attachment) {
       return;
     }
 
     try {
       const csrfToken = getCSRFToken();
+      const formData = new FormData();
+      formData.append('message_text', newMessage);
+      if (attachment) {
+        formData.append('attachment', attachment);
+      }
+
       const response = await fetch(
         `/api/conversations/${selectedConversation.conversation_id}/messages/`,
         {
           method: 'POST',
           credentials: 'include',
           headers: {
-            'Content-Type': 'application/json',
             'X-CSRFToken': csrfToken || '',
           },
-          body: JSON.stringify({ message_text: newMessage }),
+          body: formData,
         }
       );
 
@@ -140,7 +234,23 @@ function Messages() {
       const message = await response.json();
       setMessages((prev) => [...prev, message]);
       setNewMessage('');
-      setSelectedConversation((prev) => ({ ...prev, last_message: message }));
+      clearAttachment();
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[selectedConversation.conversation_id];
+        return next;
+      });
+      const updatedConversation = selectedConversation
+        ? {
+            ...selectedConversation,
+            last_message: message,
+            last_message_at: message.sent_at,
+          }
+        : selectedConversation;
+      if (updatedConversation) {
+        setSelectedConversation(updatedConversation);
+        reorderConversations(updatedConversation);
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -170,10 +280,18 @@ function Messages() {
                   <PartnerAvatar partner={convo.partner} size={44} />
                   <div className="conversation-text">
                     <div className="partner-name">
-                      {convo.partner.first_name || convo.partner.username}
+                      <Link to={`/profile/${convo.partner.id}`}>
+                        {convo.partner.first_name || convo.partner.username}
+                      </Link>
                     </div>
                     {convo.last_message ? (
-                      <p className="preview">{convo.last_message.message_text}</p>
+                      <p className="preview">
+                        {convo.last_message.has_attachment
+                          ? convo.last_message.attachment_type === 'image'
+                            ? '[Image]'
+                            : '[File]'
+                          : convo.last_message.message_text || 'New message'}
+                      </p>
                     ) : (
                       <p className="preview muted">No messages yet</p>
                     )}
@@ -193,7 +311,9 @@ function Messages() {
               <PartnerAvatar partner={selectedConversation.partner} size={48} />
               <div>
                 <h2>
-                  {selectedConversation.partner.first_name || selectedConversation.partner.username}
+                  <Link to={`/profile/${selectedConversation.partner.id}`}>
+                    {selectedConversation.partner.first_name || selectedConversation.partner.username}
+                  </Link>
                   {selectedConversation.partner.is_verified && (
                     <span className="verification-icon" title="Verified KU Student">
                       <CheckCircle size={16} />
@@ -204,7 +324,55 @@ function Messages() {
                   <p className="header-sub">{selectedConversation.partner.email}</p>
                 )}
               </div>
+              <button
+                type="button"
+                className="shared-media-button"
+                onClick={() => setShowMediaPanel((prev) => !prev)}
+              >
+                Shared Media ({mediaMessages.length})
+              </button>
             </div>
+
+            {showMediaPanel && (
+              <div className="shared-media-panel">
+                {mediaMessages.length === 0 ? (
+                  <p className="muted">No shared files yet.</p>
+                ) : (
+                  <>
+                    <div className="media-grid">
+                      {mediaMessages
+                        .filter((msg) => msg.attachment_type === 'image')
+                        .map((msg) => (
+                          <a
+                            key={`${msg.message_id}-image`}
+                            href={msg.attachment_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="media-thumb"
+                          >
+                            <img src={msg.attachment_url} alt="Shared" />
+                          </a>
+                        ))}
+                    </div>
+                    <div className="media-files">
+                      {mediaMessages
+                        .filter((msg) => msg.attachment_type !== 'image')
+                        .map((msg) => (
+                          <a
+                            key={`${msg.message_id}-file`}
+                            href={msg.attachment_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="media-file-link"
+                          >
+                            {msg.attachment_name || 'Download file'}
+                          </a>
+                        ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="messages-list" ref={messagesListRef}>
               {loadingMessages ? (
@@ -221,7 +389,18 @@ function Messages() {
                       <PartnerAvatar partner={selectedConversation.partner} size={32} />
                     )}
                     <div className="bubble-content">
-                      <p>{msg.message_text}</p>
+                      {msg.attachment_url && (
+                        <div className="bubble-attachment">
+                          {msg.attachment_type === 'image' ? (
+                            <img src={msg.attachment_url} alt={msg.attachment_name || 'Attachment'} />
+                          ) : (
+                            <a href={msg.attachment_url} target="_blank" rel="noreferrer">
+                              {msg.attachment_name || 'Download file'}
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {msg.message_text && <p>{msg.message_text}</p>}
                       <span>{new Date(msg.sent_at).toLocaleString()}</span>
                     </div>
                   </div>
@@ -230,13 +409,40 @@ function Messages() {
             </div>
 
             <div className="message-input">
+              <div className="attachment-controls">
+                <button
+                  type="button"
+                  className="attach-button"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Attach
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden-file-input"
+                  onChange={handleAttachmentChange}
+                />
+                {attachment && (
+                  <div className="attachment-preview">
+                    {attachmentPreview ? (
+                      <img src={attachmentPreview} alt="Preview" />
+                    ) : (
+                      <span>{attachment.name}</span>
+                    )}
+                    <button type="button" onClick={clearAttachment}>
+                      ×
+                    </button>
+                  </div>
+                )}
+              </div>
               <textarea
                 rows={2}
                 placeholder="Type your message..."
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => handleDraftChange(e.target.value)}
               />
-              <button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+              <button onClick={handleSendMessage} disabled={!newMessage.trim() && !attachment}>
                 Send
               </button>
             </div>

@@ -70,6 +70,9 @@ class ProfileSerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     sender = serializers.SerializerMethodField()
     is_own = serializers.SerializerMethodField()
+    attachment_url = serializers.SerializerMethodField()
+    attachment_name = serializers.SerializerMethodField()
+    has_attachment = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
@@ -81,6 +84,10 @@ class MessageSerializer(serializers.ModelSerializer):
             "is_read",
             "sender",
             "is_own",
+            "attachment_type",
+            "attachment_name",
+            "attachment_url",
+            "has_attachment",
         ]
         read_only_fields = [
             "message_id",
@@ -89,6 +96,10 @@ class MessageSerializer(serializers.ModelSerializer):
             "is_read",
             "sender",
             "is_own",
+            "attachment_type",
+            "attachment_name",
+            "attachment_url",
+            "has_attachment",
         ]
 
     def get_sender(self, obj):
@@ -104,6 +115,25 @@ class MessageSerializer(serializers.ModelSerializer):
         if request and hasattr(request, "user"):
             return obj.sender_id == request.user.pk
         return False
+
+    def get_attachment_url(self, obj):
+        if not obj.attachment:
+            return ""
+        request = self.context.get("request")
+        url = obj.attachment.url
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
+    def get_attachment_name(self, obj):
+        if obj.attachment_original_name:
+            return obj.attachment_original_name
+        if obj.attachment:
+            return obj.attachment.name.split("/")[-1]
+        return ""
+
+    def get_has_attachment(self, obj):
+        return bool(obj.attachment)
 
 
 class ConversationSerializer(serializers.ModelSerializer):

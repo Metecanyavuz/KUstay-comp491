@@ -277,7 +277,7 @@ def conversation_detail_view(request, conversation_id):
     ).update(is_read=True, read_at=timezone.now())
 
     if request.method == "POST":
-        form = MessageForm(request.POST)
+        form = MessageForm(request.POST, request.FILES)
         if form.is_valid():
             message = form.save(commit=False)
             message.sender = request.user
