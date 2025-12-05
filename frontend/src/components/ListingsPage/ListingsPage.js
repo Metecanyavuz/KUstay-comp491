@@ -415,12 +415,6 @@ function ListingsPage() {
             Filter by location, budget, or your must-have amenities. Every
             listing is created by a KUstay community member.
           </p>
-          <div className="listings-hero-actions">
-            <Link to="/listings/new" className="action-button">
-              List your place
-            </Link>
-          </div>
-
           <form className="listings-hero-search" onSubmit={handleApplyFilters}>
             <div className="hero-search-input">
               <MapPin size={18} />
@@ -586,6 +580,15 @@ function ListingsPage() {
                 <option value="price_high">Price: High to Low</option>
                 <option value="rooms">Most rooms available</option>
               </select>
+            </div>
+          </div>
+
+          <div className="post-listing-cta">
+            <div className="cta-text">Have a place to share?</div>
+            <div className="cta-button-wrap">
+              <Link to="/listings/new" className="action-button solid">
+                List your place
+              </Link>
             </div>
           </div>
 

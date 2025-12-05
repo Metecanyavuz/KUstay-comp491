@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Home, MapPin, PlusCircle } from 'lucide-react';
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import { getCSRFToken } from '../../utils/csrf';
 import './CreateListing.css';
+
+const round6 = (value) => Number.parseFloat(value).toFixed(6);
 
 const defaultForm = {
   title: '',
@@ -46,10 +50,39 @@ function CreateListing() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [neighborhoodLoading, setNeighborhoodLoading] = useState(false);
   const [geocodeWarning, setGeocodeWarning] = useState('');
+  const [mapCenter, setMapCenter] = useState([39.0, 35.0]); // Turkey center
+  const [markerPosition, setMarkerPosition] = useState(null);
+  const [userMovedPin, setUserMovedPin] = useState(false);
+
+  const DefaultIcon = L.icon({
+    iconUrl: require('leaflet/dist/images/marker-icon.png'),
+    iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+    shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+  });
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleNeighborhoodChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      neighborhood: value,
+    }));
+    setUserMovedPin(false);
+    const hoodObj =
+      neighborhoodOptions.find((h) => h.name === value) ||
+      neighborhoodOptions.find((h) => h.neighborhood === value);
+    const coords = getCoords(hoodObj);
+    if (coords) {
+      setMapCenter([coords.lat, coords.lng]);
+      setMarkerPosition(coords);
+    }
   };
 
   useEffect(() => {
@@ -91,6 +124,13 @@ function CreateListing() {
     }));
     setDistrictOptions(districts);
     setNeighborhoodOptions([]);
+    setMarkerPosition(null);
+    setUserMovedPin(false);
+    const coords = getCoords(selected);
+    if (coords) {
+      setMapCenter([coords.lat, coords.lng]);
+      setMarkerPosition(coords);
+    }
   };
 
   const handleDistrictChange = (value) => {
@@ -106,7 +146,89 @@ function CreateListing() {
         districtOptions.find((d) => d.district === value);
       const districtId = districtObj?.id || districtObj?._id || districtObj?.districtId;
       fetchNeighborhoods(value, districtId);
+      const coords = getCoords(districtObj);
+      if (coords) {
+        setMapCenter([coords.lat, coords.lng]);
+        setMarkerPosition(coords);
+      }
     }
+    setUserMovedPin(false);
+  };
+
+  // Re-center map based on selected city/district/neighborhood (best-effort).
+  useEffect(() => {
+    const controller = new AbortController();
+    const { city, district, neighborhood } = form;
+    if (!city) return undefined;
+
+    async function geocodeArea() {
+      try {
+        const attempts = [];
+        if (neighborhood) attempts.push([neighborhood, district, city]);
+        if (district) attempts.push([district, city]);
+        if (city) attempts.push([city]);
+
+        for (const parts of attempts) {
+          const queryParts = [...parts, 'Türkiye'].filter(Boolean);
+          const params = new URLSearchParams({
+            q: queryParts.join(', '),
+            format: 'json',
+            limit: '1',
+            addressdetails: '0',
+            countrycodes: 'tr',
+          });
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+            {
+              signal: controller.signal,
+              headers: { 'User-Agent': 'KUstay/1.0 (listing form)' },
+            },
+          );
+          if (!response.ok) {
+            continue;
+          }
+          const results = await response.json();
+          if (Array.isArray(results) && results.length > 0) {
+            const { lat, lon } = results[0];
+            if (lat && lon) {
+              const round6 = (v) => Number.parseFloat(v).toFixed(6);
+              const coords = { lat: Number(round6(lat)), lng: Number(round6(lon)) };
+              setMapCenter([coords.lat, coords.lng]);
+              if (!userMovedPin) {
+                setMarkerPosition(coords);
+              }
+              break;
+            }
+          }
+        }
+      } catch (err) {
+        // silent best-effort
+      }
+    }
+
+    geocodeArea();
+    return () => controller.abort();
+  }, [form.city, form.district, form.neighborhood, userMovedPin]);
+
+  const getCoords = (obj) => {
+    if (!obj) return null;
+    const lat =
+      obj.latitude ??
+      obj.lat ??
+      obj?.geo?.latitude ??
+      obj?.coordinates?.latitude ??
+      obj?.location?.lat;
+    const lng =
+      obj.longitude ??
+      obj.lon ??
+      obj.lng ??
+      obj?.geo?.longitude ??
+      obj?.coordinates?.longitude ??
+      obj?.location?.lng;
+    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+      return { lat: Number(round6(lat)), lng: Number(round6(lng)) };
+    }
+    return null;
   };
 
   const fetchNeighborhoods = async (districtName, districtId) => {
@@ -202,9 +324,12 @@ function CreateListing() {
       payload.append('available_from', form.available_from);
     }
 
-    if (coords) {
-      payload.append('latitude', coords.lat);
-      payload.append('longitude', coords.lng);
+    const finalCoords = markerPosition || coords;
+    if (finalCoords) {
+      const latStr = Number(round6(finalCoords.lat)).toFixed(6);
+      const lonStr = Number(round6(finalCoords.lng)).toFixed(6);
+      payload.append('latitude', latStr);
+      payload.append('longitude', lonStr);
     }
 
     if (imageFile) {
@@ -287,8 +412,12 @@ function CreateListing() {
       }
       const { lat, lon } = results[0];
       if (lat && lon) {
-        const round6 = (v) => Number.parseFloat(v).toFixed(6);
-        return { lat: round6(lat), lng: round6(lon) };
+          const coords = { lat: Number(round6(lat)), lng: Number(round6(lon)) };
+          setMapCenter([coords.lat, coords.lng]);
+          if (!userMovedPin) {
+            setMarkerPosition(coords);
+          }
+          return coords;
       }
       setGeocodeWarning('Adres konumu bulunamadı; koordinatlar olmadan kaydedilecek.');
       return null;
@@ -462,7 +591,7 @@ function CreateListing() {
                 <select
                   name="neighborhood"
                   value={form.neighborhood}
-                  onChange={handleChange}
+                  onChange={(event) => handleNeighborhoodChange(event.target.value)}
                   disabled={!form.district}
                 >
                   <option value="">Mahalle seçin</option>
@@ -485,13 +614,39 @@ function CreateListing() {
                 <input
                   name="address"
                   type="text"
-                  placeholder="Street and number"
+                  placeholder="Street, cadde, site, vb."
                   value={form.address}
                   onChange={handleChange}
                   required
                 />
               </label>
             </div>
+
+            <div className="map-picker">
+              <div className="map-header">
+                <span>Konumu ince ayarla</span>
+                <small>Adres bulunamazsa pini taşıyarak konumu seçin.</small>
+              </div>
+            <MapContainer
+              center={mapCenter}
+              zoom={13}
+              scrollWheelZoom={false}
+              className="picker-map"
+            >
+              <MapViewUpdater center={mapCenter} />
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+            <MarkerDraggable
+              markerPosition={markerPosition}
+              setMarkerPosition={setMarkerPosition}
+              defaultIcon={DefaultIcon}
+              setMapCenter={setMapCenter}
+              setUserMovedPin={setUserMovedPin}
+            />
+          </MapContainer>
+        </div>
           </section>
 
           <section className="form-panel">
@@ -577,6 +732,51 @@ function CreateListing() {
       </div>
     </div>
   );
+}
+
+function MarkerDraggable({
+  markerPosition,
+  setMarkerPosition,
+  defaultIcon,
+  setMapCenter,
+  setUserMovedPin,
+}) {
+  useMapEvents({
+    click(e) {
+      const { lat, lng } = e.latlng;
+      setMarkerPosition({ lat: round6(lat), lng: round6(lng) });
+      setMapCenter([lat, lng]);
+      setUserMovedPin(true);
+    },
+  });
+
+  if (!markerPosition) return null;
+
+  return (
+    <Marker
+      position={[markerPosition.lat, markerPosition.lng]}
+      draggable
+      eventHandlers={{
+        dragend: (event) => {
+      const latlng = event.target.getLatLng();
+      setMarkerPosition({ lat: round6(latlng.lat), lng: round6(latlng.lng) });
+      setMapCenter([latlng.lat, latlng.lng]);
+      setUserMovedPin(true);
+    },
+      }}
+      icon={defaultIcon}
+    />
+  );
+}
+
+function MapViewUpdater({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && map) {
+      map.setView(center);
+    }
+  }, [center, map]);
+  return null;
 }
 
 export default CreateListing;
