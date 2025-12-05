@@ -36,21 +36,41 @@
   margin-bottom: 2rem;
 }
 
-.listings-page .listings-hero-actions {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1rem;
-}
-
 .listings-page .action-button {
   background: #fff;
   color: var(--ku-red-dark);
   border: none;
   border-radius: 10px;
-  padding: 0.75rem 1.2rem;
+  padding: 0.7rem 1.2rem;
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.listings-page .action-button.solid {
+  background: var(--ku-red-dark);
+  color: #fff;
+}
+
+.listings-page .post-listing-cta {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin: 1.25rem 0 0.5rem;
+  justify-content: flex-start;
+}
+
+.listings-page .post-listing-cta .cta-text {
+  font-weight: 700;
+  color: var(--ku-black);
+}
+
+.listings-page .post-listing-cta .cta-button-wrap {
+  justify-self: start;
 }
 
 .listings-page .listings-hero-search {
