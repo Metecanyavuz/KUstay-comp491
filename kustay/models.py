@@ -229,6 +229,11 @@ class Conversation(models.Model):
         return f"Conversation between {self.user1} and {self.user2}"
 
 class Message(models.Model):
+    class AttachmentType(models.TextChoices):
+        TEXT = "text", "Text"
+        IMAGE = "image", "Image"
+        FILE = "file", "File"
+
     message_id = models.BigAutoField(primary_key=True)
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -252,7 +257,18 @@ class Message(models.Model):
         null=True,
         blank=True,
     )
-    message_text = models.TextField()
+    message_text = models.TextField(blank=True)
+    attachment = models.FileField(
+        upload_to="message_attachments/",
+        null=True,
+        blank=True,
+    )
+    attachment_original_name = models.CharField(max_length=255, blank=True)
+    attachment_type = models.CharField(
+        max_length=20,
+        choices=AttachmentType.choices,
+        default=AttachmentType.TEXT,
+    )
     is_read = models.BooleanField(default=False)
     sent_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)

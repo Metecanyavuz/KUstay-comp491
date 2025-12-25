@@ -1,0 +1,243 @@
+.map-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.map-toolbar h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.map-toolbar p {
+  margin: 0.2rem 0 0 0;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.radius-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 180px;
+}
+
+.radius-control input[type='range'] {
+  flex: 1;
+}
+
+.geo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(195, 17, 46, 0.08);
+  color: var(--ku-red-dark, #c3112e);
+  border-radius: 10px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.geo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.map-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  min-height: 60vh;
+}
+
+.map-wrapper {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.map-canvas {
+  width: 100%;
+  height: 65vh;
+}
+
+.custom-marker .marker-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 16px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  position: relative;
+}
+
+.listing-marker .marker-pin {
+  background: linear-gradient(135deg, #f97316, #ef4444);
+}
+
+.user-marker .marker-pin {
+  background: #2563eb;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.2);
+}
+
+.custom-marker .marker-pin .dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.map-sidebar {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.map-sidebar h2 {
+  margin: 0 0 0.5rem 0;
+}
+
+.listing-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.listing-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.listing-title {
+  font-weight: 700;
+  text-decoration: none;
+  color: #1f2937;
+}
+
+.listing-meta {
+  margin: 0.2rem 0 0 0;
+  color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.price {
+  font-weight: 700;
+  color: var(--ku-red-dark, #c3112e);
+  white-space: nowrap;
+}
+
+.distance-chip {
+  background: rgba(195, 17, 46, 0.12);
+  color: var(--ku-red-dark, #c3112e);
+  padding: 0.1rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.map-loading,
+.map-error {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.map-loading .spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.popup {
+  min-width: 180px;
+}
+
+.popup h3 {
+  margin: 0 0 0.25rem 0;
+}
+
+.popup-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.popup-link {
+  display: inline-block;
+  margin-top: 0.4rem;
+  color: var(--ku-red-dark, #c3112e);
+  font-weight: 700;
+}
+
+.muted {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 1000px) {
+  .map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .map-canvas {
+    height: 50vh;
+  }
+}

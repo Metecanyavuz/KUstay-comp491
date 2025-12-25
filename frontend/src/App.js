@@ -15,6 +15,7 @@ import Matches from './components/Matches/Matches';
 import Profile from './components/Profile/Profile';
 import UserProfile from './components/UserProfile/UserProfile';
 import Messages from './components/Messages/Messages';
+import MapView from './components/MapView/MapView';
 import './App.css';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/listings" element={<ListingsPage />} />
             <Route path="/listings/:listingId" element={<ListingDetail />} />
+            <Route path="/map" element={<MapView />} />
             <Route
               path="/listings/new"
               element={

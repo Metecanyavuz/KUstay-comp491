@@ -87,7 +87,7 @@ class ListingForm(forms.ModelForm):
 class MessageForm(forms.ModelForm):
     class Meta:
         model = Message
-        fields = ["message_text"]
+        fields = ["message_text", "attachment"]
         widgets = {
             "message_text": forms.Textarea(
                 attrs={
@@ -96,3 +96,12 @@ class MessageForm(forms.ModelForm):
                 }
             )
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        text = (cleaned_data.get("message_text") or "").strip()
+        attachment = cleaned_data.get("attachment")
+        if not text and not attachment:
+            raise forms.ValidationError("Please enter a message or attach a file.")
+        cleaned_data["message_text"] = text
+        return cleaned_data
