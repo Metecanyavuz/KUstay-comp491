@@ -35,16 +35,24 @@ SECRET_KEY = os.getenv('SECRET_KEY', "django-insecure-3@i7s8dg*p#4fzpq=)ymh59bv%
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 # Parse comma-separated ALLOWED_HOSTS from environment variable
+def read_list(var_name: str, defaults: list[str]) -> list[str]:
+    """Read comma-separated env var and merge with defaults while keeping order/uniques."""
+    raw = os.getenv(var_name, "")
+    items = [item.strip() for item in raw.split(",") if item.strip()]
+    merged: list[str] = []
+    for item in items + defaults:
+        if item and item not in merged:
+            merged.append(item)
+    return merged
+
+
 default_allowed_hosts = [
     "localhost",
     "127.0.0.1",
     "kustay-comp491-production.up.railway.app",
     "491-frontend.up.railway.app",
 ]
-ALLOWED_HOSTS = os.getenv(
-    "ALLOWED_HOSTS",
-    ",".join(default_allowed_hosts)
-).split(",")
+ALLOWED_HOSTS = read_list("ALLOWED_HOSTS", default_allowed_hosts)
 
 
 # Application definition
@@ -206,11 +214,9 @@ default_csrf_trusted_origins = [
     "http://127.0.0.1:3000",
     "https://kustay-comp491-production.up.railway.app",
     "https://491-frontend.up.railway.app",
+    "https://*.up.railway.app",
 ]
-CSRF_TRUSTED_ORIGINS = os.getenv(
-    "CSRF_TRUSTED_ORIGINS",
-    ",".join(default_csrf_trusted_origins)
-).split(",")
+CSRF_TRUSTED_ORIGINS = read_list("CSRF_TRUSTED_ORIGINS", default_csrf_trusted_origins)
 
 # Allow API calls from the deployed frontend by default
 default_cors_allowed_origins = [
@@ -218,10 +224,7 @@ default_cors_allowed_origins = [
     "http://127.0.0.1:3000",
     "https://491-frontend.up.railway.app",
 ]
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS",
-    ",".join(default_cors_allowed_origins)
-).split(",")
+CORS_ALLOWED_ORIGINS = read_list("CORS_ALLOWED_ORIGINS", default_cors_allowed_origins)
 
 CORS_ALLOW_CREDENTIALS = True
 
