@@ -38,8 +38,9 @@ RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
     echo '  echo "ERROR: BACKEND_URL environment variable is not set!"' >> /docker-entrypoint.sh && \
     echo '  exit 1' >> /docker-entrypoint.sh && \
     echo 'fi' >> /docker-entrypoint.sh && \
-    echo 'echo "Substituting BACKEND_URL in nginx config..."' >> /docker-entrypoint.sh && \
-    echo 'envsubst '"'"'$BACKEND_URL'"'"' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
+    echo 'echo "PORT is: ${PORT}"' >> /docker-entrypoint.sh && \
+    echo 'echo "Substituting BACKEND_URL and PORT in nginx config..."' >> /docker-entrypoint.sh && \
+    echo 'envsubst '"'"'$BACKEND_URL $PORT'"'"' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
     echo 'echo "Generated nginx config:"' >> /docker-entrypoint.sh && \
     echo 'cat /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
     echo 'echo "Starting nginx..."' >> /docker-entrypoint.sh && \
