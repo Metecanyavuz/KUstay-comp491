@@ -95,15 +95,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 #     }
 # }
 
+# Database configuration
+# For production, DATABASE_URL must be set in environment
+# For local development, fallback to local PostgreSQL
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgres://kustay_user:kustay_password@127.0.0.1:5433/kustay_db"
+)
+
 DATABASES = {
-    "default": dj_database_url.parse(
-        os.getenv(
-            "DATABASE_URL",
-            # Safe fallback (your working Docker mapping on 5433)
-            "postgres://kustay_user:kustay_password@127.0.0.1:5433/kustay_db",
-        ),
-        conn_max_age=600,
-    )
+    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)
 }
 
 
