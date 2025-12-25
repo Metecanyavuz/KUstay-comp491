@@ -35,7 +35,16 @@ SECRET_KEY = os.getenv('SECRET_KEY', "django-insecure-3@i7s8dg*p#4fzpq=)ymh59bv%
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 # Parse comma-separated ALLOWED_HOSTS from environment variable
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+default_allowed_hosts = [
+    "localhost",
+    "127.0.0.1",
+    "kustay-comp491-production.up.railway.app",
+    "491-frontend.up.railway.app",
+]
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS",
+    ",".join(default_allowed_hosts)
+).split(",")
 
 
 # Application definition
@@ -192,15 +201,27 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '')
 
 # CSRF & CORS Configuration
 # Parse from environment variables with fallback to localhost
+default_csrf_trusted_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://kustay-comp491-production.up.railway.app",
+    "https://491-frontend.up.railway.app",
+]
 CSRF_TRUSTED_ORIGINS = os.getenv(
-    'CSRF_TRUSTED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000'
-).split(',')
+    "CSRF_TRUSTED_ORIGINS",
+    ",".join(default_csrf_trusted_origins)
+).split(",")
 
+# Allow API calls from the deployed frontend by default
+default_cors_allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://491-frontend.up.railway.app",
+]
 CORS_ALLOWED_ORIGINS = os.getenv(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000'
-).split(',')
+    "CORS_ALLOWED_ORIGINS",
+    ",".join(default_cors_allowed_origins)
+).split(",")
 
 CORS_ALLOW_CREDENTIALS = True
 
