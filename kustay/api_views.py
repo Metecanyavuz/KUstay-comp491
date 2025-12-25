@@ -1,7 +1,9 @@
 import json
+import logging
 import os
 import uuid
 from decimal import Decimal, InvalidOperation
+from datetime import timedelta
 
 from django.db.models import Q
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
@@ -10,7 +12,7 @@ from django.utils.crypto import get_random_string
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.core.files.storage import default_storage
-from datetime import timedelta
+from django.conf import settings
 
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import (
@@ -191,12 +193,13 @@ def signup_view(request):
         user_type=user_type
     )
     
-    # Send verification email to KU students
+    # Send verification email to KU students (do not block on failures)
+    verification_sent = False
     if user_type == 'KU_Student' and (email.endswith('@ku.edu.tr') or email.endswith('@ku.edu')):
-        send_verification_email(user)
-    
+        verification_sent = send_verification_email(user)
+
     django_login(request, user)
-    
+
     return Response({
         'user': {
             'id': user.pk,
@@ -204,18 +207,19 @@ def signup_view(request):
             'username': user.username,
             'user_type': user.user_type,
             'is_verified': user.is_verified,
-        }
+        },
+        'message': 'Verification email sent' if verification_sent else 'Account created'
     })
 
 
 def send_verification_email(user):
-    """Send email verification to KU students"""
+    """Send email verification to KU students. Returns True if send attempted/succeeded."""
     verification_token = get_random_string(64)
     user.verification_token = verification_token
-    user.save()
+    user.save(update_fields=['verification_token'])
     
-    # Frontend URL - change this to your production URL when deploying
-    verify_url = f"http://localhost:3000/verify-email?token={verification_token}"
+    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+    verify_url = f"{frontend_url}/verify-email?token={verification_token}"
     
     # Email subject
     subject = 'Verify Your KUstay Account'
@@ -274,17 +278,18 @@ KUstay Team
     
     # Send email
     try:
-        from django.core.mail import send_mail
         send_mail(
             subject=subject,
             message=message,
-            from_email='noreply@kustay.com',
+            from_email=settings.DEFAULT_FROM_EMAIL or 'noreply@kustay.com',
             recipient_list=[user.email],
             html_message=html_message,
             fail_silently=False,
         )
+        return True
     except Exception as e:
-        print(f"Error sending verification email: {e}")
+        logging.getLogger(__name__).warning("Verification email failed: %s", e)
+        return False
 
 
 @api_view(['POST'])
