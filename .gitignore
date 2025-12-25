@@ -234,4 +234,15 @@ local_settings.py
 
 # Media and Static (optional - uncomment if needed)
 # media/
-# staticfiles/
+staticfiles/
+
+# Deployment
+.env.staging
+.env.production
+
+# Keep example files
+!.env.example
+
+# Frontend build
+frontend/build/
+frontend/node_modules/
