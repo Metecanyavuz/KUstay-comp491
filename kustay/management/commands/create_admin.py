@@ -15,6 +15,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Get credentials from environment or use defaults
         email = os.getenv('DJANGO_SUPERUSER_EMAIL', 'admin@kustay.com')
+        username = os.getenv('DJANGO_SUPERUSER_USERNAME', 'admin')
         password = os.getenv('DJANGO_SUPERUSER_PASSWORD', 'admin123')
 
         # Check if any superuser exists
@@ -25,6 +26,7 @@ class Command(BaseCommand):
         # Create superuser
         try:
             user = User.objects.create_superuser(
+                username=username,
                 email=email,
                 password=password
             )
