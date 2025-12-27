@@ -228,26 +228,26 @@ def send_verification_email(user):
     # Email subject
     subject = 'Verify Your KUstay Account'
 
-    # HTML message - Gmail-compatible version
+    # HTML message - Gmail-compatible version with KU brand colors
     html_message = f'''<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #667eea; margin-bottom: 20px;">Welcome to KUstay!</h2>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #231f20; margin: 0; padding: 0; background-color: #fff4f5;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border: 1px solid #e4c9cf;">
+        <h2 style="color: #c3112e; margin-bottom: 20px;">Welcome to KUstay!</h2>
         <p>Hello <strong>{user.username}</strong>,</p>
         <p>Thank you for joining KUstay. Please verify your email address to access all features of the platform.</p>
         <div style="margin: 30px 0; text-align: center;">
-            <a href="{verify_url}" style="background-color: #667eea; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verify Email Address</a>
+            <a href="{verify_url}" style="background-color: #c3112e; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verify Email Address</a>
         </div>
-        <p style="margin: 20px 0;">Or copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; color: #667eea; font-size: 14px;">{verify_url}</p>
-        <p style="color: #666; font-size: 14px; margin-top: 30px;">This link will expire in 24 hours.</p>
-        <p style="color: #666; font-size: 14px;">If you did not create this account, please ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="color: #999; font-size: 12px;">Best regards,<br>KUstay Team</p>
+        <p style="margin: 20px 0; color: #5c474a;">Or copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #c3112e; font-size: 14px;">{verify_url}</p>
+        <p style="color: #5c474a; font-size: 14px; margin-top: 30px;">This link will expire in 24 hours.</p>
+        <p style="color: #5c474a; font-size: 14px;">If you did not create this account, please ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #e4c9cf; margin: 20px 0;">
+        <p style="color: #5c474a; font-size: 12px;">Best regards,<br>KUstay Team</p>
     </div>
 </body>
 </html>'''
