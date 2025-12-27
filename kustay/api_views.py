@@ -216,6 +216,8 @@ def signup_view(request):
 
 def send_verification_email(user):
     """Send email verification to KU students using Resend"""
+    logger.info("=== Starting email verification process for %s ===", user.email)
+
     verification_token = get_random_string(64)
     user.verification_token = verification_token
     user.save()
@@ -264,6 +266,11 @@ def send_verification_email(user):
     # Send email using Resend
     from_email = settings.DEFAULT_FROM_EMAIL or 'KUstay <onboarding@resend.dev>'
 
+    logger.info("Using Resend API for email delivery")
+    logger.info("From email: %s", from_email)
+    logger.info("To email: %s", user.email)
+    logger.info("Resend API key configured: %s", bool(settings.RESEND_API_KEY))
+
     try:
         # Set Resend API key
         resend.api_key = settings.RESEND_API_KEY
@@ -276,11 +283,13 @@ def send_verification_email(user):
             "html": html_message,
         }
 
+        logger.info("Sending email via Resend API...")
         email_response = resend.Emails.send(params)
         logger.info("Verification email sent successfully to %s. Response: %s", user.email, email_response)
 
     except Exception as e:
         # Log and continue so signup flow doesn't hang on email issues
+        logger.error("Error type: %s", type(e).__name__)
         logger.exception("Error sending verification email to %s", user.email)
 
 
