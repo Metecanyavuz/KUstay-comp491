@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.core.files.storage import default_storage
 from datetime import timedelta
+import resend
 
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import (
@@ -214,35 +215,18 @@ def signup_view(request):
 
 
 def send_verification_email(user):
-    """Send email verification to KU students"""
+    """Send email verification to KU students using Resend"""
     verification_token = get_random_string(64)
     user.verification_token = verification_token
     user.save()
-    
+
     # Frontend URL - change this to your production URL when deploying
     verify_url = f"{FRONTEND_BASE_URL.rstrip('/')}/verify-email?token={verification_token}"
-    
+
     # Email subject
     subject = 'Verify Your KUstay Account'
-    
-    # Plain text message
-    message = f'''
-Hello {user.username},
 
-Welcome to KUstay! Please verify your email address to access all features of the platform.
-
-Click the link below to verify your email:
-{verify_url}
-
-This link will expire in 24 hours.
-
-If you did not create this account, please ignore this email.
-
-Best regards,
-KUstay Team
-    '''
-    
-    # HTML message (optional but looks better)
+    # HTML message
     html_message = f'''
     <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -251,7 +235,7 @@ KUstay Team
                 <p>Hello <strong>{user.username}</strong>,</p>
                 <p>Thank you for joining KUstay. Please verify your email address to access all features of the platform.</p>
                 <div style="margin: 30px 0;">
-                    <a href="{verify_url}" 
+                    <a href="{verify_url}"
                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                               color: white;
                               padding: 12px 30px;
@@ -276,23 +260,27 @@ KUstay Team
         </body>
     </html>
     '''
-    
-    # Send email
-    from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER or 'noreply@kustay.com'
+
+    # Send email using Resend
+    from_email = settings.DEFAULT_FROM_EMAIL or 'KUstay <onboarding@resend.dev>'
 
     try:
-        sent_count = send_mail(
-            subject=subject,
-            message=message,
-            from_email=from_email,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-        if sent_count == 0:
-            logger.error("Verification email not sent (send_mail returned 0) for user=%s", user.email)
+        # Set Resend API key
+        resend.api_key = settings.RESEND_API_KEY
+
+        # Send email via Resend
+        params = {
+            "from": from_email,
+            "to": [user.email],
+            "subject": subject,
+            "html": html_message,
+        }
+
+        email_response = resend.Emails.send(params)
+        logger.info("Verification email sent successfully to %s. Response: %s", user.email, email_response)
+
     except Exception as e:
-        # Log and continue so signup flow doesn't hang on SMTP issues
+        # Log and continue so signup flow doesn't hang on email issues
         logger.exception("Error sending verification email to %s", user.email)
 
 
@@ -359,22 +347,58 @@ def forgot_password_view(request):
         
         # Create reset URL
         reset_url = f"{FRONTEND_BASE_URL.rstrip('/')}/reset-password?token={reset_token}"
-        
-        # Send email
-        from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER or 'noreply@kustay.com'
 
-        from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER or 'noreply@kustay.com'
+        # Send email using Resend
+        from_email = settings.DEFAULT_FROM_EMAIL or 'KUstay <onboarding@resend.dev>'
 
-        sent_count = send_mail(
-            'Password Reset Request',
-            f'Click the link to reset your password: {reset_url}\n\nThis link expires in 1 hour.',
-            from_email,
-            [email],
-            fail_silently=False,
-        )
-        if sent_count == 0:
-            logger.error("Password reset email not sent (send_mail returned 0) for user=%s", email)
-        
+        html_message = f'''
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #667eea;">Password Reset Request</h2>
+                    <p>You have requested to reset your password.</p>
+                    <p>Click the button below to reset your password:</p>
+                    <div style="margin: 30px 0;">
+                        <a href="{reset_url}"
+                           style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                  color: white;
+                                  padding: 12px 30px;
+                                  text-decoration: none;
+                                  border-radius: 5px;
+                                  display: inline-block;">
+                            Reset Password
+                        </a>
+                    </div>
+                    <p style="color: #666; font-size: 14px;">
+                        This link will expire in 1 hour.
+                    </p>
+                    <p style="color: #666; font-size: 14px;">
+                        If you did not request this, please ignore this email.
+                    </p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="color: #999; font-size: 12px;">
+                        Best regards,<br>
+                        KUstay Team
+                    </p>
+                </div>
+            </body>
+        </html>
+        '''
+
+        try:
+            resend.api_key = settings.RESEND_API_KEY
+            params = {
+                "from": from_email,
+                "to": [email],
+                "subject": "Password Reset Request",
+                "html": html_message,
+            }
+            email_response = resend.Emails.send(params)
+            logger.info("Password reset email sent successfully to %s. Response: %s", email, email_response)
+        except Exception as e:
+            logger.exception("Error sending password reset email to %s", email)
+            return Response({'error': 'Failed to send email'}, status=500)
+
         return Response({'message': 'Reset email sent'}, status=200)
     except User.DoesNotExist:
         # Return success even if user doesn't exist (security best practice)
