@@ -191,6 +191,7 @@ LOGIN_REDIRECT_URL = "home"
 
 # For production with Resend (recommended for Railway deployment)
 # Resend uses HTTP API instead of SMTP, so we configure it via environment variable
+# Updated: 2025-12-27 - Force rebuild
 RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'KUstay <onboarding@resend.dev>')
 
