@@ -1,10 +1,9 @@
 import json
-import logging
 import os
 import uuid
 from decimal import Decimal, InvalidOperation
-from datetime import timedelta
 
+from django.conf import settings
 from django.db.models import Q
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.core.mail import send_mail
@@ -12,7 +11,7 @@ from django.utils.crypto import get_random_string
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.core.files.storage import default_storage
-from django.conf import settings
+from datetime import timedelta
 
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import (
@@ -34,6 +33,8 @@ from .serializers import (
     ProfileSerializer,
 )
 import re
+
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -193,13 +194,12 @@ def signup_view(request):
         user_type=user_type
     )
     
-    # Send verification email to KU students (do not block on failures)
-    verification_sent = False
+    # Send verification email to KU students
     if user_type == 'KU_Student' and (email.endswith('@ku.edu.tr') or email.endswith('@ku.edu')):
-        verification_sent = send_verification_email(user)
-
+        send_verification_email(user)
+    
     django_login(request, user)
-
+    
     return Response({
         'user': {
             'id': user.pk,
@@ -207,19 +207,18 @@ def signup_view(request):
             'username': user.username,
             'user_type': user.user_type,
             'is_verified': user.is_verified,
-        },
-        'message': 'Verification email sent' if verification_sent else 'Account created'
+        }
     })
 
 
 def send_verification_email(user):
-    """Send email verification to KU students. Returns True if send attempted/succeeded."""
+    """Send email verification to KU students"""
     verification_token = get_random_string(64)
     user.verification_token = verification_token
-    user.save(update_fields=['verification_token'])
+    user.save()
     
-    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
-    verify_url = f"{frontend_url}/verify-email?token={verification_token}"
+    # Frontend URL - change this to your production URL when deploying
+    verify_url = f"{FRONTEND_BASE_URL.rstrip('/')}/verify-email?token={verification_token}"
     
     # Email subject
     subject = 'Verify Your KUstay Account'
@@ -277,19 +276,20 @@ KUstay Team
     '''
     
     # Send email
+    from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER or 'noreply@kustay.com'
+
     try:
         send_mail(
             subject=subject,
             message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL or 'noreply@kustay.com',
+            from_email=from_email,
             recipient_list=[user.email],
             html_message=html_message,
             fail_silently=False,
         )
-        return True
     except Exception as e:
-        logging.getLogger(__name__).warning("Verification email failed: %s", e)
-        return False
+        # Log and continue so signup flow doesn't hang on SMTP issues
+        print(f"Error sending verification email: {e}")
 
 
 @api_view(['POST'])
@@ -354,13 +354,15 @@ def forgot_password_view(request):
         user.save()
         
         # Create reset URL
-        reset_url = f"http://localhost:3000/reset-password?token={reset_token}"
+        reset_url = f"{FRONTEND_BASE_URL.rstrip('/')}/reset-password?token={reset_token}"
         
         # Send email
+        from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER or 'noreply@kustay.com'
+
         send_mail(
             'Password Reset Request',
             f'Click the link to reset your password: {reset_url}\n\nThis link expires in 1 hour.',
-            'noreply@kustay.com',
+            from_email,
             [email],
             fail_silently=False,
         )
