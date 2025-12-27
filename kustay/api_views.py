@@ -233,22 +233,42 @@ def send_verification_email(user):
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #231f20; margin: 0; padding: 0; background-color: #fff4f5;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border: 1px solid #e4c9cf;">
-        <h2 style="color: #c3112e; margin-bottom: 20px;">Welcome to KUstay!</h2>
-        <p>Hello <strong>{user.username}</strong>,</p>
-        <p>Thank you for joining KUstay. Please verify your email address to access all features of the platform.</p>
-        <div style="margin: 30px 0; text-align: center;">
-            <a href="{verify_url}" style="background-color: #c3112e; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verify Email Address</a>
-        </div>
-        <p style="margin: 20px 0; color: #5c474a;">Or copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; color: #c3112e; font-size: 14px;">{verify_url}</p>
-        <p style="color: #5c474a; font-size: 14px; margin-top: 30px;">This link will expire in 24 hours.</p>
-        <p style="color: #5c474a; font-size: 14px;">If you did not create this account, please ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #e4c9cf; margin: 20px 0;">
-        <p style="color: #5c474a; font-size: 12px;">Best regards,<br>KUstay Team</p>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fff4f5;">
+        <tr>
+            <td align="center" style="padding: 20px;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border: 1px solid #e4c9cf;">
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="color: #c3112e; margin: 0 0 20px 0; font-size: 24px;">Welcome to KUstay!</h2>
+                            <p style="margin: 0 0 15px 0; color: #231f20; font-size: 16px;">Hello <strong>{user.username}</strong>,</p>
+                            <p style="margin: 0 0 25px 0; color: #231f20; font-size: 16px;">Thank you for joining KUstay. Please verify your email address to access all features of the platform.</p>
+
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{verify_url}" style="background-color: #c3112e; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">Verify Email Address</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 20px 0 10px 0; color: #5c474a; font-size: 14px;">Or copy and paste this link into your browser:</p>
+                            <p style="margin: 0 0 30px 0; word-break: break-all; color: #c3112e; font-size: 14px;">{verify_url}</p>
+
+                            <p style="margin: 0 0 10px 0; color: #5c474a; font-size: 14px;">This link will expire in 24 hours.</p>
+                            <p style="margin: 0 0 30px 0; color: #5c474a; font-size: 14px;">If you did not create this account, please ignore this email.</p>
+
+                            <hr style="border: none; border-top: 1px solid #e4c9cf; margin: 20px 0;">
+
+                            <p style="margin: 0; color: #5c474a; font-size: 12px;">Best regards,<br>KUstay Team</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>'''
 
