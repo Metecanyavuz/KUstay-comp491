@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from decimal import Decimal, InvalidOperation
+import logging
 
 from django.conf import settings
 from django.db.models import Q
@@ -35,6 +36,7 @@ from .serializers import (
 import re
 
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
+logger = logging.getLogger(__name__)
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -279,7 +281,7 @@ KUstay Team
     from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER or 'noreply@kustay.com'
 
     try:
-        send_mail(
+        sent_count = send_mail(
             subject=subject,
             message=message,
             from_email=from_email,
@@ -287,9 +289,11 @@ KUstay Team
             html_message=html_message,
             fail_silently=False,
         )
+        if sent_count == 0:
+            logger.error("Verification email not sent (send_mail returned 0) for user=%s", user.email)
     except Exception as e:
         # Log and continue so signup flow doesn't hang on SMTP issues
-        print(f"Error sending verification email: {e}")
+        logger.exception("Error sending verification email to %s", user.email)
 
 
 @api_view(['POST'])
@@ -359,13 +363,17 @@ def forgot_password_view(request):
         # Send email
         from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER or 'noreply@kustay.com'
 
-        send_mail(
+        from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER or 'noreply@kustay.com'
+
+        sent_count = send_mail(
             'Password Reset Request',
             f'Click the link to reset your password: {reset_url}\n\nThis link expires in 1 hour.',
             from_email,
             [email],
             fail_silently=False,
         )
+        if sent_count == 0:
+            logger.error("Password reset email not sent (send_mail returned 0) for user=%s", email)
         
         return Response({'message': 'Reset email sent'}, status=200)
     except User.DoesNotExist:
