@@ -1,9 +1,5 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.urls import path
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.core.management import call_command
 from .models import (
     User, Profile, Listing, ListingImage, Conversation, Message,
     Review, BlockReview, Report, BlockedUser, MatchCompatibility, Notification
@@ -16,7 +12,7 @@ class UserAdmin(BaseUserAdmin):
     list_filter = ("user_type", "is_verified", "is_staff", "is_superuser")
     search_fields = ("email", "username", "first_name", "last_name")
     ordering = ("-created_at",)
-    
+
     fieldsets = (
         (None, {"fields": ("email", "username", "password")}),
         ("Personal Info", {"fields": ("first_name", "last_name")}),
@@ -24,7 +20,7 @@ class UserAdmin(BaseUserAdmin):
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important Dates", {"fields": ("last_login", "date_joined")}),
     )
-    
+
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
@@ -129,59 +125,3 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ("user__email", "user__username", "content")
     list_editable = ("is_read",)
     readonly_fields = ("created_at",)
-
-
-# Custom Admin Site class to add custom views
-class KUStayAdminSite(admin.AdminSite):
-    site_header = "KUStay Administration"
-    site_title = "KUStay Admin"
-    index_title = "Welcome to KUStay Administration"
-
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path('load-test-data/', self.admin_view(self.load_test_data_view), name='load_test_data'),
-            path('fix-admin-permissions/', self.admin_view(self.fix_admin_permissions_view), name='fix_admin_permissions'),
-        ]
-        return custom_urls + urls
-
-    def load_test_data_view(self, request):
-        """Custom view to load test data"""
-        if request.method == 'POST':
-            clear_existing = request.POST.get('clear_existing') == 'on'
-            try:
-                if clear_existing:
-                    call_command('load_test_data', '--clear')
-                    messages.success(request, 'Test data loaded successfully (existing data cleared)!')
-                else:
-                    call_command('load_test_data')
-                    messages.success(request, 'Test data loaded successfully!')
-            except Exception as e:
-                messages.error(request, f'Error loading test data: {str(e)}')
-            return redirect('admin:index')
-
-        context = self.each_context(request)
-        context['title'] = 'Load Test Data'
-        return render(request, 'admin/load_test_data.html', context)
-
-    def fix_admin_permissions_view(self, request):
-        """Fix admin user permissions"""
-        if request.method == 'POST':
-            try:
-                call_command('create_admin', '--fix-existing')
-                messages.success(request, 'Admin permissions have been fixed! Please log out and log back in.')
-            except Exception as e:
-                messages.error(request, f'Error fixing admin permissions: {str(e)}')
-            return redirect('admin:index')
-
-        # If GET request, just run the command and redirect
-        try:
-            call_command('create_admin', '--fix-existing')
-            messages.success(request, 'Admin permissions have been fixed! Please log out and log back in.')
-        except Exception as e:
-            messages.error(request, f'Error fixing admin permissions: {str(e)}')
-        return redirect('admin:index')
-
-# Replace default admin site
-admin.site = KUStayAdminSite()
-admin.site._registry = admin.site._registry  # Preserve registered models
