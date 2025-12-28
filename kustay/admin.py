@@ -141,6 +141,7 @@ class KUStayAdminSite(admin.AdminSite):
         urls = super().get_urls()
         custom_urls = [
             path('load-test-data/', self.admin_view(self.load_test_data_view), name='load_test_data'),
+            path('fix-admin-permissions/', self.admin_view(self.fix_admin_permissions_view), name='fix_admin_permissions'),
         ]
         return custom_urls + urls
 
@@ -162,6 +163,24 @@ class KUStayAdminSite(admin.AdminSite):
         context = self.each_context(request)
         context['title'] = 'Load Test Data'
         return render(request, 'admin/load_test_data.html', context)
+
+    def fix_admin_permissions_view(self, request):
+        """Fix admin user permissions"""
+        if request.method == 'POST':
+            try:
+                call_command('create_admin', '--fix-existing')
+                messages.success(request, 'Admin permissions have been fixed! Please log out and log back in.')
+            except Exception as e:
+                messages.error(request, f'Error fixing admin permissions: {str(e)}')
+            return redirect('admin:index')
+
+        # If GET request, just run the command and redirect
+        try:
+            call_command('create_admin', '--fix-existing')
+            messages.success(request, 'Admin permissions have been fixed! Please log out and log back in.')
+        except Exception as e:
+            messages.error(request, f'Error fixing admin permissions: {str(e)}')
+        return redirect('admin:index')
 
 # Replace default admin site
 admin.site = KUStayAdminSite()
