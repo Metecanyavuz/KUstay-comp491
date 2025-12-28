@@ -1,0 +1,69 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 40px auto; padding: 20px;">
+    <h1>Load Test Data</h1>
+
+    <div style="background: #e8f4f8; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3>What this will do:</h3>
+        <ul style="line-height: 1.8;">
+            <li><strong>5 Test Users:</strong> 2 KU Students + 3 External Students</li>
+            <li><strong>5 User Profiles:</strong> With detailed preferences (budget, neighborhoods, lifestyle, etc.)</li>
+            <li><strong>7 Listings:</strong> Various properties across Istanbul with real coordinates</li>
+            <li><strong>Match Scores:</strong> Automatically calculated compatibility between all users</li>
+        </ul>
+    </div>
+
+    <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3>Test Credentials:</h3>
+        <p>After loading, you can login with these accounts (password for all: <code>Test123!</code>):</p>
+        <ul style="line-height: 1.8;">
+            <li><strong>KU Students:</strong>
+                <ul>
+                    <li>ahmet.yilmaz@ku.edu.tr</li>
+                    <li>elif.demir@ku.edu.tr</li>
+                </ul>
+            </li>
+            <li><strong>External Students:</strong>
+                <ul>
+                    <li>can.ozturk@gmail.com</li>
+                    <li>zeynep.kaya@hotmail.com</li>
+                    <li>murat.sahin@outlook.com</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <form method="post" style="margin: 30px 0;">
+        {% csrf_token %}
+
+        <div style="margin: 20px 0;">
+            <label style="display: flex; align-items: center; font-size: 16px;">
+                <input type="checkbox" name="clear_existing" style="margin-right: 10px; width: 20px; height: 20px;">
+                <span>Clear existing test data before loading</span>
+            </label>
+            <p style="margin-left: 30px; color: #666; font-size: 14px;">
+                This will delete all test users and their related data before creating new ones.
+            </p>
+        </div>
+
+        <div style="margin: 30px 0;">
+            <button type="submit"
+                    style="background: #417690; color: white; padding: 12px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;"
+                    onclick="return confirm('Are you sure you want to load test data?');">
+                Load Test Data
+            </button>
+            <a href="{% url 'admin:index' %}"
+               style="margin-left: 15px; padding: 12px 30px; background: #ccc; color: #333; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Cancel
+            </a>
+        </div>
+    </form>
+
+    <div style="background: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3>⚠️ Warning:</h3>
+        <p>This feature is for testing purposes only. Do not use in production with real user data.</p>
+    </div>
+</div>
+{% endblock %}
