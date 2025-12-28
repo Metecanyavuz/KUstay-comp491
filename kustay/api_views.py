@@ -228,6 +228,21 @@ def send_verification_email(user):
     # Email subject
     subject = 'Verify Your KUstay Account'
 
+    # Plain text fallback (helps some clients and makes link obvious)
+    text_message = f"""Hello {user.username},
+
+Welcome to KUstay! Please verify your email address to access all features of the platform.
+
+Verify your email: {verify_url}
+
+This link will expire in 24 hours.
+
+If you did not create this account, please ignore this email.
+
+Best regards,
+KUstay Team
+"""
+
     # HTML message - Gmail-compatible version with KU brand colors
     html_message = f'''<!DOCTYPE html>
 <html>
@@ -249,7 +264,7 @@ def send_verification_email(user):
                             <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                 <tr>
                                     <td align="center" style="padding: 20px 0;">
-                                        <a href="{verify_url}" style="background-color: #c3112e; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">Verify Email Address</a>
+                                        <a href="{verify_url}" target="_blank" rel="noopener noreferrer" style="background-color: #c3112e; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">Verify Email Address</a>
                                     </td>
                                 </tr>
                             </table>
@@ -289,6 +304,7 @@ def send_verification_email(user):
             "from": from_email,
             "to": [user.email],
             "subject": subject,
+            "text": text_message,
             "html": html_message,
         }
 
