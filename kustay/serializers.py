@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Conversation, Listing, ListingImage, Message, Profile
+from .models import BlockReview, Conversation, Listing, ListingImage, Message, Profile, Review
 
 
 class ListingImageSerializer(serializers.ModelSerializer):
@@ -39,6 +39,114 @@ class ListingSerializer(serializers.ModelSerializer):
             "images",
         ]
         read_only_fields = ["listing_id", "created_at", "updated_at"]
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    reviewer = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Review
+        fields = [
+            "review_id",
+            "rating",
+            "comment",
+            "created_at",
+            "reviewer",
+            "moderation_status",
+            "is_approved",
+        ]
+        read_only_fields = [
+            "review_id",
+            "created_at",
+            "reviewer",
+            "moderation_status",
+            "is_approved",
+        ]
+
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
+
+    def get_reviewer(self, obj):
+        user = obj.reviewer
+        profile = getattr(user, "profile", None)
+        return {
+            "id": user.pk,
+            "email": user.email,
+            "first_name": getattr(profile, "first_name", user.first_name),
+            "last_name": getattr(profile, "last_name", user.last_name),
+            "profile_photo_url": getattr(profile, "profile_photo_url", ""),
+        }
+
+
+class BlockReviewSerializer(serializers.ModelSerializer):
+    reviewer = serializers.SerializerMethodField()
+    overall_rating = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BlockReview
+        fields = [
+            "block_review_id",
+            "block_name",
+            "neighborhood",
+            "unit_details",
+            "noise_rating",
+            "management_rating",
+            "safety_rating",
+            "transport_rating",
+            "overall_rating",
+            "comment",
+            "created_at",
+            "reviewer",
+            "moderation_status",
+            "is_approved",
+        ]
+        read_only_fields = [
+            "block_review_id",
+            "created_at",
+            "reviewer",
+            "overall_rating",
+            "moderation_status",
+            "is_approved",
+        ]
+
+    def validate_noise_rating(self, value):
+        return self._validate_rating(value)
+
+    def validate_management_rating(self, value):
+        return self._validate_rating(value)
+
+    def validate_safety_rating(self, value):
+        return self._validate_rating(value)
+
+    def validate_transport_rating(self, value):
+        return self._validate_rating(value)
+
+    def _validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
+
+    def get_overall_rating(self, obj):
+        values = [
+            obj.noise_rating,
+            obj.management_rating,
+            obj.safety_rating,
+            obj.transport_rating,
+        ]
+        return round(sum(values) / len(values), 2)
+
+    def get_reviewer(self, obj):
+        user = obj.user
+        profile = getattr(user, "profile", None)
+        return {
+            "id": user.pk,
+            "email": user.email,
+            "first_name": getattr(profile, "first_name", user.first_name),
+            "last_name": getattr(profile, "last_name", user.last_name),
+            "profile_photo_url": getattr(profile, "profile_photo_url", ""),
+        }
 
 
 class ProfileSerializer(serializers.ModelSerializer):

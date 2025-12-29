@@ -296,6 +296,136 @@
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
 
+.reviews-panel {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.review-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.star-row {
+  display: flex;
+  gap: 0.25rem;
+  color: var(--ku-red-light);
+}
+
+.star-icon.active,
+.star-row .star-icon.active {
+  color: var(--ku-red);
+  fill: currentColor;
+}
+
+.star-row svg {
+  fill: none;
+}
+
+.rating-number {
+  font-weight: 700;
+  color: var(--ku-red-dark);
+}
+
+.reviews-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.review-card,
+.review-existing {
+  background: var(--ku-rose-100);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.reviewer-name {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ku-black);
+}
+
+.review-comment {
+  margin: 0;
+  color: var(--ku-black);
+  line-height: 1.5;
+}
+
+.review-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rating-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.star-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ku-red-light);
+}
+
+.star-button.active {
+  color: var(--ku-red);
+}
+
+.star-button svg {
+  fill: none;
+}
+
+.star-button.active svg {
+  fill: currentColor;
+}
+
+.rating-label {
+  color: var(--ku-text-muted);
+  font-weight: 600;
+}
+
+.review-form textarea {
+  width: 100%;
+  border: 1px solid var(--ku-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  font-family: inherit;
+  color: var(--ku-black);
+  resize: vertical;
+  min-height: 90px;
+}
+
+.review-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .muted {
   color: var(--ku-text-muted);
 }
