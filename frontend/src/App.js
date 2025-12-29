@@ -17,6 +17,7 @@ import UserProfile from './components/UserProfile/UserProfile';
 import Messages from './components/Messages/Messages';
 import MapView from './components/MapView/MapView';
 import Reviews from './components/Reviews/Reviews';
+import ReviewsBuilding from './components/Reviews/ReviewsBuilding';
 import './App.css';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
             <Route path="/listings/:listingId" element={<ListingDetail />} />
             <Route path="/map" element={<MapView />} />
             <Route path="/reviews" element={<Reviews />} />
+            <Route path="/reviews/:buildingName" element={<ReviewsBuilding />} />
             <Route
               path="/listings/new"
               element={

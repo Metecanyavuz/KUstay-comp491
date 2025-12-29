@@ -75,6 +75,7 @@ urlpatterns = [
     path('api/profile/<int:user_id>/', api_views.user_profile_view, name='api_user_profile'),  # View other user's profile
     path('api/block-reviews/', api_views.block_reviews_view, name='api_block_reviews'),
     path('api/block-reviews/highlights/', api_views.block_review_highlights, name='api_block_review_highlights'),
+    path('api/block-reviews/buildings/', api_views.block_review_buildings, name='api_block_review_buildings'),
 
 
     path('api/auth/signup/', api_views.signup_view),
