@@ -32,6 +32,7 @@ function Navigation() {
         <div className="nav-menu desktop">
           <a href="/" className="nav-link">Home</a>
           <a href="/listings" className="nav-link">Listings</a>
+          <a href="/map" className="nav-link">Map</a>
           {user && (
             <>
               <a href="/matches" className="nav-link">Matches</a>
@@ -81,6 +82,7 @@ function Navigation() {
         <div className="mobile-menu">
           <a href="/" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Home</a>
           <a href="/listings" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Listings</a>
+          <a href="/map" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Map</a>
           {user && (
             <>
               <a href="/matches" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Matches</a>
