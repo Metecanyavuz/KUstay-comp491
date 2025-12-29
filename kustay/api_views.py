@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 import logging
 
 from django.conf import settings
+from django.db import connection
 from django.db.models import Avg, Count, ExpressionWrapper, FloatField, F, OuterRef, Q, Subquery
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.core.mail import send_mail
@@ -910,3 +911,137 @@ def block_review_buildings(request):
     ).order_by('block_name', 'neighborhood')
 
     return Response(list(buildings))
+
+
+def _dictfetchall(cursor):
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def address_provinces(request):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            'SELECT il_id AS id, il_adi AS name FROM address.iller ORDER BY il_adi'
+        )
+        provinces = _dictfetchall(cursor)
+        cursor.execute(
+            'SELECT ilce_id AS id, ilce_adi AS name, il_id FROM address.ilceler ORDER BY ilce_adi'
+        )
+        districts = _dictfetchall(cursor)
+
+    districts_by_province = {}
+    for district in districts:
+        districts_by_province.setdefault(district['il_id'], []).append(
+            {'id': district['id'], 'name': district['name']}
+        )
+
+    for province in provinces:
+        province['districts'] = districts_by_province.get(province['id'], [])
+
+    return Response(provinces)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def address_districts(request):
+    province_id = (request.query_params.get('province_id') or '').strip()
+    province_name = (request.query_params.get('province') or '').strip()
+
+    query = 'SELECT ilce_id AS id, ilce_adi AS name, il_id FROM address.ilceler'
+    params = []
+
+    if province_id:
+        query += ' WHERE il_id = %s'
+        params.append(province_id)
+    elif province_name:
+        query += ' WHERE il_id = (SELECT il_id FROM address.iller WHERE il_adi ILIKE %s LIMIT 1)'
+        params.append(province_name)
+
+    query += ' ORDER BY ilce_adi'
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        districts = _dictfetchall(cursor)
+
+    return Response(districts)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def address_neighborhoods(request):
+    district_id = (request.query_params.get('district_id') or '').strip()
+    district_name = (request.query_params.get('district') or '').strip()
+    query_text = (request.query_params.get('q') or '').strip()
+    limit_raw = request.query_params.get('limit', '500')
+
+    try:
+        limit = max(1, min(int(limit_raw), 1000))
+    except ValueError:
+        limit = 500
+
+    if not district_id and not district_name:
+        return Response({'error': 'district_id is required.'}, status=400)
+
+    query = 'SELECT mahalle_id AS id, mahalle_adi AS name, ilce_id FROM address.mahalleler'
+    params = []
+    where = []
+
+    if district_id:
+        where.append('ilce_id = %s')
+        params.append(district_id)
+    else:
+        where.append(
+            'ilce_id = (SELECT ilce_id FROM address.ilceler WHERE ilce_adi ILIKE %s LIMIT 1)'
+        )
+        params.append(district_name)
+
+    if query_text:
+        where.append('mahalle_adi ILIKE %s')
+        params.append(f'%{query_text}%')
+
+    query += ' WHERE ' + ' AND '.join(where)
+    query += ' ORDER BY mahalle_adi LIMIT %s'
+    params.append(limit)
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        neighborhoods = _dictfetchall(cursor)
+
+    return Response(neighborhoods)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def address_streets(request):
+    neighborhood_id = (request.query_params.get('neighborhood_id') or '').strip()
+    query_text = (request.query_params.get('q') or '').strip()
+    limit_raw = request.query_params.get('limit', '50')
+
+    try:
+        limit = max(1, min(int(limit_raw), 5000))
+    except ValueError:
+        limit = 50
+
+    if not neighborhood_id:
+        return Response({'error': 'neighborhood_id is required.'}, status=400)
+
+    query = 'SELECT sokak_id AS id, sokak_adi AS name, mahalle_id FROM address.sokaklar'
+    params = []
+    where = ['mahalle_id = %s']
+    params.append(neighborhood_id)
+
+    if query_text:
+        where.append('sokak_adi ILIKE %s')
+        params.append(f'%{query_text}%')
+
+    query += ' WHERE ' + ' AND '.join(where)
+    query += ' ORDER BY sokak_adi LIMIT %s'
+    params.append(limit)
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        streets = _dictfetchall(cursor)
+
+    return Response(streets)

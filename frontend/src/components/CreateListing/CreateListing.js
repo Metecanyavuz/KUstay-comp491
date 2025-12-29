@@ -16,6 +16,7 @@ const defaultForm = {
   city: '',
   district: '',
   address: '',
+  address_detail: '',
   neighborhood: '',
   rent_amount: '',
   available_from: '',
@@ -46,6 +47,10 @@ function CreateListing() {
   const [provinceData, setProvinceData] = useState([]);
   const [districtOptions, setDistrictOptions] = useState([]);
   const [neighborhoodOptions, setNeighborhoodOptions] = useState([]);
+  const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState('');
+  const [streetOptions, setStreetOptions] = useState([]);
+  const [streetLoading, setStreetLoading] = useState(false);
+  const [streetError, setStreetError] = useState('');
   const [locationError, setLocationError] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
   const [neighborhoodLoading, setNeighborhoodLoading] = useState(false);
@@ -73,11 +78,20 @@ function CreateListing() {
     setForm((prev) => ({
       ...prev,
       neighborhood: value,
+      address: '',
+      address_detail: '',
     }));
     setUserMovedPin(false);
     const hoodObj =
       neighborhoodOptions.find((h) => h.name === value) ||
       neighborhoodOptions.find((h) => h.neighborhood === value);
+    const hoodId = hoodObj?.id || hoodObj?._id || '';
+    setSelectedNeighborhoodId(hoodId);
+    setStreetOptions([]);
+    setStreetError('');
+    if (hoodId) {
+      fetchStreets(hoodId);
+    }
     const coords = getCoords(hoodObj);
     if (coords) {
       setMapCenter([coords.lat, coords.lng]);
@@ -91,14 +105,15 @@ function CreateListing() {
       setLocationLoading(true);
       setLocationError('');
       try {
-        const response = await fetch('https://api.turkiyeapi.dev/v1/provinces', {
+        const response = await fetch('/api/addresses/provinces/', {
           signal: controller.signal,
+          credentials: 'include',
         });
         if (!response.ok) {
           throw new Error('Unable to load provinces right now.');
         }
         const data = await response.json();
-        const items = data?.data || [];
+        const items = Array.isArray(data) ? data : data?.data || [];
         setProvinceData(items);
       } catch (err) {
         if (err.name !== 'AbortError') {
@@ -121,9 +136,14 @@ function CreateListing() {
       city: value,
       district: '',
       neighborhood: '',
+      address: '',
+      address_detail: '',
     }));
     setDistrictOptions(districts);
     setNeighborhoodOptions([]);
+    setSelectedNeighborhoodId('');
+    setStreetOptions([]);
+    setStreetError('');
     setMarkerPosition(null);
     setUserMovedPin(false);
     const coords = getCoords(selected);
@@ -138,8 +158,13 @@ function CreateListing() {
       ...prev,
       district: value,
       neighborhood: '',
+      address: '',
+      address_detail: '',
     }));
     setNeighborhoodOptions([]);
+    setSelectedNeighborhoodId('');
+    setStreetOptions([]);
+    setStreetError('');
     if (value) {
       const districtObj =
         districtOptions.find((d) => d.name === value) ||
@@ -158,12 +183,15 @@ function CreateListing() {
   // Re-center map based on selected city/district/neighborhood (best-effort).
   useEffect(() => {
     const controller = new AbortController();
-    const { city, district, neighborhood } = form;
+    const { city, district, neighborhood, address, address_detail } = form;
     if (!city) return undefined;
 
     async function geocodeArea() {
       try {
         const attempts = [];
+        const street = address?.trim();
+        const detail = address_detail?.trim();
+        if (street) attempts.push([street, detail, neighborhood, district, city]);
         if (neighborhood) attempts.push([neighborhood, district, city]);
         if (district) attempts.push([district, city]);
         if (city) attempts.push([city]);
@@ -208,7 +236,14 @@ function CreateListing() {
 
     geocodeArea();
     return () => controller.abort();
-  }, [form.city, form.district, form.neighborhood, userMovedPin]);
+  }, [
+    form.city,
+    form.district,
+    form.neighborhood,
+    form.address,
+    form.address_detail,
+    userMovedPin,
+  ]);
 
   const getCoords = (obj) => {
     if (!obj) return null;
@@ -237,20 +272,21 @@ function CreateListing() {
     try {
       const params = new URLSearchParams();
       if (districtId) {
-        params.set('districtId', districtId);
-      } else {
+        params.set('district_id', districtId);
+      } else if (districtName) {
         params.set('district', districtName);
       }
       params.set('limit', '500');
 
       const response = await fetch(
-        `https://api.turkiyeapi.dev/v1/neighborhoods?${params.toString()}`,
+        `/api/addresses/neighborhoods/?${params.toString()}`,
+        { credentials: 'include' },
       );
       if (!response.ok) {
         throw new Error('Mahalleler alınamadı');
       }
       const data = await response.json();
-      const items = data?.data || [];
+      const items = Array.isArray(data) ? data : data?.data || [];
       setNeighborhoodOptions(items);
     } catch (err) {
       console.error(err);
@@ -259,6 +295,46 @@ function CreateListing() {
     } finally {
       setNeighborhoodLoading(false);
     }
+  };
+
+  const fetchStreets = async (neighborhoodId, query) => {
+    if (!neighborhoodId) {
+      setStreetOptions([]);
+      return;
+    }
+    setStreetLoading(true);
+    setStreetError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('neighborhood_id', neighborhoodId);
+      params.set('limit', '5000');
+      if (query) {
+        params.set('q', query);
+      }
+      const response = await fetch(`/api/addresses/streets/?${params.toString()}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Sokaklar alınamadı');
+      }
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : data?.data || [];
+      setStreetOptions(items);
+    } catch (err) {
+      console.error(err);
+      setStreetError('Sokak listesi yüklenemedi.');
+      setStreetOptions([]);
+    } finally {
+      setStreetLoading(false);
+    }
+  };
+
+  const handleStreetChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      address: value,
+    }));
+    setUserMovedPin(false);
   };
 
   const handleFileChange = (event) => {
@@ -289,18 +365,19 @@ function CreateListing() {
     const district = form.district.trim();
     const neighborhood = form.neighborhood.trim();
     const street = form.address.trim();
+    const addressDetail = form.address_detail.trim();
 
     if (!city || !district) {
       setError('Please enter your city and district.');
       return;
     }
 
-    const composedAddress = [street, district, city].filter(Boolean).join(', ');
+    const composedAddress = [street, addressDetail, district, city].filter(Boolean).join(', ');
 
     setGeocodeWarning('');
 
     const coords = await geocodeAddress({
-      street,
+      street: [street, addressDetail].filter(Boolean).join(' '),
       neighborhood,
       district,
       city,
@@ -610,14 +687,38 @@ function CreateListing() {
               </label>
 
               <label className="form-field">
-                <span>Address *</span>
-                <input
+                <span>Sokak *</span>
+                <select
                   name="address"
-                  type="text"
-                  placeholder="Street, cadde, site, vb."
                   value={form.address}
-                  onChange={handleChange}
+                  onChange={(event) => handleStreetChange(event.target.value)}
+                  disabled={!selectedNeighborhoodId || streetLoading}
                   required
+                >
+                  <option value="">Sokak seçin</option>
+                  {streetOptions.map((street) => (
+                    <option
+                      key={street.id || street.sokak_id || street.name || street.sokak_adi}
+                      value={street.name || street.sokak_adi || street}
+                    >
+                      {street.name || street.sokak_adi || street}
+                    </option>
+                  ))}
+                </select>
+                {streetLoading && <small className="form-hint">Sokaklar yükleniyor…</small>}
+                {streetError && <small className="form-error inline">{streetError}</small>}
+              </label>
+            </div>
+
+            <div className="form-grid two">
+              <label className="form-field">
+                <span>Adres detayı (opsiyonel)</span>
+                <input
+                  name="address_detail"
+                  type="text"
+                  placeholder="Site adı, apartman no vb."
+                  value={form.address_detail}
+                  onChange={handleChange}
                 />
               </label>
             </div>

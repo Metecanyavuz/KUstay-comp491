@@ -76,6 +76,10 @@ urlpatterns = [
     path('api/block-reviews/', api_views.block_reviews_view, name='api_block_reviews'),
     path('api/block-reviews/highlights/', api_views.block_review_highlights, name='api_block_review_highlights'),
     path('api/block-reviews/buildings/', api_views.block_review_buildings, name='api_block_review_buildings'),
+    path('api/addresses/provinces/', api_views.address_provinces, name='api_address_provinces'),
+    path('api/addresses/districts/', api_views.address_districts, name='api_address_districts'),
+    path('api/addresses/neighborhoods/', api_views.address_neighborhoods, name='api_address_neighborhoods'),
+    path('api/addresses/streets/', api_views.address_streets, name='api_address_streets'),
 
 
     path('api/auth/signup/', api_views.signup_view),
