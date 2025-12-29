@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Home, Users, MessageCircle, Shield } from 'lucide-react';
+import { Home, MessageCircle, Search, Shield, Users } from 'lucide-react';
 import './HomePage.css';
 
 function HomePage() {

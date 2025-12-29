@@ -7,6 +7,7 @@ import {
   Home,
   Loader,
   MapPin,
+  Star,
   Users,
 } from 'lucide-react';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
@@ -70,6 +71,22 @@ const formatDate = (value) => {
   }
 };
 
+const formatReviewDate = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  try {
+    return new Date(value).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch (error) {
+    return value;
+  }
+};
+
 const normalizeList = (value) => {
   if (!value) {
     return [];
@@ -101,6 +118,15 @@ function ListingDetail() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState('');
+  const [reviewSummary, setReviewSummary] = useState({ average: null, count: 0 });
+  const [existingReview, setExistingReview] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewNotice, setReviewNotice] = useState('');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -132,6 +158,49 @@ function ListingDetail() {
     }
 
     fetchListing();
+
+    return () => controller.abort();
+  }, [listingId]);
+
+  useEffect(() => {
+    if (!listingId) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
+    async function fetchReviews() {
+      setReviewsLoading(true);
+      setReviewsError('');
+
+      try {
+        const response = await fetch(`/api/listings/${listingId}/reviews/`, {
+          credentials: 'include',
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load reviews');
+        }
+
+        const data = await response.json();
+        setReviews(Array.isArray(data.reviews) ? data.reviews : []);
+        setReviewSummary({
+          average: data.summary?.average ?? null,
+          count: data.summary?.count ?? 0,
+        });
+        setExistingReview(data.existing_review || null);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error(err);
+          setReviewsError('Unable to load reviews right now.');
+        }
+      } finally {
+        setReviewsLoading(false);
+      }
+    }
+
+    fetchReviews();
 
     return () => controller.abort();
   }, [listingId]);
@@ -170,10 +239,72 @@ function ListingDetail() {
     return null;
   }, [listing?.latitude, listing?.longitude]);
 
+  const isOwner = Boolean(user && listing && listing.user === user.email);
+  const averageRatingLabel =
+    reviewSummary.average === null || reviewSummary.average === undefined
+      ? '—'
+      : reviewSummary.average.toFixed(1);
+
+  const existingStatusLabel = existingReview?.moderation_status
+    ? existingReview.moderation_status.replace('_', ' ')
+    : '';
+
   const handleDelete = async () => {
     if (!listingId) return;
     setShowConfirm(true);
   };
+
+  const handleReviewSubmit = async (event) => {
+    event.preventDefault();
+    setReviewNotice('');
+
+    if (!rating) {
+      setReviewNotice('Please select a rating.');
+      return;
+    }
+
+    setReviewSubmitting(true);
+
+    try {
+      const response = await fetch(`/api/listings/${listingId}/reviews/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken() || '',
+        },
+        body: JSON.stringify({
+          rating,
+          comment,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Unable to submit review.');
+      }
+
+      const data = await response.json();
+      setExistingReview(data);
+      setRating(0);
+      setComment('');
+      setReviewNotice('Thanks! Your review is pending approval.');
+    } catch (err) {
+      console.error(err);
+      setReviewNotice(err.message || 'Unable to submit review.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const renderStars = (value, size = 16) =>
+    [1, 2, 3, 4, 5].map((star) => (
+      <Star
+        key={star}
+        size={size}
+        className={`star-icon ${value >= star ? 'active' : ''}`}
+      />
+    ));
 
   const confirmDelete = async () => {
     setDeleting(true);
@@ -395,21 +526,125 @@ function ListingDetail() {
                 </section>
               )}
 
-              {galleryImages.length > 0 && (
-                <section className="panel gallery">
-                  <div className="panel-header">
-                    <h3>Gallery</h3>
-                  </div>
-                  <div className="gallery-grid">
-                    {galleryImages.map((url) => (
-                      <img key={url} src={url} alt="Listing" />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
+            {galleryImages.length > 0 && (
+              <section className="panel gallery">
+                <div className="panel-header">
+                  <h3>Gallery</h3>
+                </div>
+                <div className="gallery-grid">
+                  {galleryImages.map((url) => (
+                    <img key={url} src={url} alt="Listing" />
+                  ))}
+                </div>
+              </section>
+            )}
 
-            {showConfirm && (
+            <section className="panel reviews-panel">
+              <div className="panel-header reviews-header">
+                <div>
+                  <h3>Ratings & comments</h3>
+                  <p className="muted">
+                    {reviewSummary.count
+                      ? `${reviewSummary.count} review${reviewSummary.count === 1 ? '' : 's'}`
+                      : 'No reviews yet'}
+                  </p>
+                </div>
+                <div className="review-summary">
+                  <div className="star-row">{renderStars(Math.round(reviewSummary.average || 0))}</div>
+                  <span className="rating-number">{averageRatingLabel}</span>
+                </div>
+              </div>
+
+              {reviewsLoading ? (
+                <p className="muted">Loading reviews...</p>
+              ) : reviewsError ? (
+                <p className="muted">{reviewsError}</p>
+              ) : reviews.length ? (
+                <div className="reviews-list">
+                  {reviews.map((review) => (
+                    <div key={review.review_id} className="review-card">
+                      <div className="review-header">
+                        <div>
+                          <p className="reviewer-name">
+                            {review.reviewer?.first_name || review.reviewer?.last_name
+                              ? `${review.reviewer?.first_name || ''} ${review.reviewer?.last_name || ''}`.trim()
+                              : review.reviewer?.email || 'User'}
+                          </p>
+                          <p className="muted">{formatReviewDate(review.created_at)}</p>
+                        </div>
+                        <div className="star-row">{renderStars(review.rating)}</div>
+                      </div>
+                      {review.comment && <p className="review-comment">{review.comment}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">No reviews yet.</p>
+              )}
+
+              {user ? (
+                isOwner ? (
+                  <p className="muted">You cannot review your own listing.</p>
+                ) : existingReview ? (
+                  <div className="review-existing">
+                    <div className="review-header">
+                      <div>
+                        <p className="reviewer-name">Your review</p>
+                        {existingStatusLabel && (
+                          <p className="muted">Status: {existingStatusLabel}</p>
+                        )}
+                      </div>
+                      <div className="star-row">{renderStars(existingReview.rating)}</div>
+                    </div>
+                    {existingReview.comment && (
+                      <p className="review-comment">{existingReview.comment}</p>
+                    )}
+                  </div>
+                ) : (
+                  <form className="review-form" onSubmit={handleReviewSubmit}>
+                    <div className="rating-picker">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <button
+                          type="button"
+                          key={value}
+                          className={`star-button ${rating >= value ? 'active' : ''}`}
+                          onClick={() => setRating(value)}
+                          aria-label={`${value} stars`}
+                        >
+                          <Star size={22} />
+                        </button>
+                      ))}
+                      <span className="rating-label">
+                        {rating ? `${rating} / 5` : 'Select rating'}
+                      </span>
+                    </div>
+
+                    <textarea
+                      rows={3}
+                      value={comment}
+                      onChange={(event) => setComment(event.target.value)}
+                      placeholder="Share a comment (optional)"
+                    />
+
+                    <div className="review-actions">
+                      <button
+                        type="submit"
+                        className="ghost-button secondary"
+                        disabled={reviewSubmitting}
+                      >
+                        {reviewSubmitting ? 'Submitting…' : 'Submit review'}
+                      </button>
+                      {reviewNotice && <p className="muted">{reviewNotice}</p>}
+                    </div>
+                  </form>
+                )
+              ) : (
+                <p className="muted">Log in to leave a review.</p>
+              )}
+            </section>
+          </div>
+
+          {showConfirm && (
               <div className="confirm-overlay">
                 <div className="confirm-modal">
                   <h3>Delete listing?</h3>

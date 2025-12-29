@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 import logging
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Avg, Count, ExpressionWrapper, FloatField, F, OuterRef, Q, Subquery
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
@@ -26,13 +26,15 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Conversation, Listing, Message, Profile, User
+from .models import BlockReview, Conversation, Listing, Message, Profile, Review, User
 from .serializers import (
     ConversationDetailSerializer,
     ConversationSerializer,
     ListingSerializer,
     MessageSerializer,
     ProfileSerializer,
+    ReviewSerializer,
+    BlockReviewSerializer,
 )
 import re
 
@@ -82,6 +84,70 @@ class ListingViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(amenities__icontains=term)
 
         return queryset
+
+    @action(detail=True, methods=["get", "post"], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
+    def reviews(self, request, pk=None):
+        listing = self.get_object()
+
+        existing_review = None
+        if request.user.is_authenticated:
+            existing_review = Review.objects.filter(listing=listing, reviewer=request.user).first()
+
+        if request.method == "GET":
+            approved_reviews = (
+                listing.reviews.filter(
+                    is_approved=True,
+                    moderation_status=Review.ModerationStatus.APPROVED,
+                )
+                .select_related("reviewer", "reviewed_user")
+                .order_by("-created_at")
+            )
+            summary = approved_reviews.aggregate(
+                avg_rating=Avg("rating"),
+                count=Count("review_id"),
+            )
+            return Response(
+                {
+                    "summary": {
+                        "average": summary["avg_rating"],
+                        "count": summary["count"],
+                    },
+                    "reviews": ReviewSerializer(
+                        approved_reviews,
+                        many=True,
+                        context={"request": request},
+                    ).data,
+                    "existing_review": ReviewSerializer(
+                        existing_review,
+                        context={"request": request},
+                    ).data
+                    if existing_review
+                    else None,
+                }
+            )
+
+        if request.user == listing.user:
+            return Response(
+                {"error": "You cannot review your own listing."},
+                status=400,
+            )
+        if existing_review:
+            return Response(
+                {"error": "You have already reviewed this listing."},
+                status=400,
+            )
+
+        serializer = ReviewSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        review = serializer.save(
+            reviewer=request.user,
+            reviewed_user=listing.user,
+            listing=listing,
+        )
+        return Response(
+            ReviewSerializer(review, context={"request": request}).data,
+            status=201,
+        )
 
 
 class ConversationViewSet(
@@ -613,3 +679,167 @@ def user_profile_view(request, user_id):
         return Response({'error': 'Profile not found'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def block_reviews_view(request):
+    if request.method == 'GET':
+        queryset = (
+            BlockReview.objects.filter(
+                is_approved=True,
+                moderation_status=BlockReview.ModerationStatus.APPROVED,
+            )
+            .select_related("user")
+            .order_by("-created_at")
+        )
+
+        block_name = (request.query_params.get('block_name') or '').strip()
+        neighborhood = (request.query_params.get('neighborhood') or '').strip()
+        if block_name:
+            queryset = queryset.filter(block_name__iexact=block_name)
+        if neighborhood:
+            queryset = queryset.filter(neighborhood__iexact=neighborhood)
+
+        summary = queryset.aggregate(
+            avg_noise=Avg("noise_rating"),
+            avg_management=Avg("management_rating"),
+            avg_safety=Avg("safety_rating"),
+            avg_transport=Avg("transport_rating"),
+            count=Count("block_review_id"),
+        )
+
+        overall = None
+        if summary["count"]:
+            overall = (
+                (summary["avg_noise"] or 0)
+                + (summary["avg_management"] or 0)
+                + (summary["avg_safety"] or 0)
+                + (summary["avg_transport"] or 0)
+            ) / 4
+
+        return Response(
+            {
+                "summary": {
+                    "average": overall,
+                    "count": summary["count"],
+                    "avg_noise": summary["avg_noise"],
+                    "avg_management": summary["avg_management"],
+                    "avg_safety": summary["avg_safety"],
+                    "avg_transport": summary["avg_transport"],
+                },
+                "reviews": BlockReviewSerializer(
+                    queryset,
+                    many=True,
+                    context={"request": request},
+                ).data,
+            }
+        )
+
+    if not request.user.is_authenticated:
+        return Response({'error': 'Authentication required.'}, status=401)
+
+    data = request.data.copy()
+    block_name = (data.get('block_name') or '').strip()
+    neighborhood = (data.get('neighborhood') or '').strip()
+
+    if not block_name or not neighborhood:
+        return Response(
+            {'error': 'block_name and neighborhood are required.'},
+            status=400,
+        )
+
+    existing = BlockReview.objects.filter(
+        user=request.user,
+        block_name__iexact=block_name,
+        neighborhood__iexact=neighborhood,
+    ).first()
+    if existing:
+        return Response(
+            {'error': 'You already reviewed this building.'},
+            status=400,
+        )
+
+    serializer = BlockReviewSerializer(data=data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    review = serializer.save(user=request.user)
+    return Response(
+        BlockReviewSerializer(review, context={"request": request}).data,
+        status=201,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def block_review_highlights(request):
+    limit_raw = request.query_params.get('limit', '6')
+    try:
+        limit = max(1, min(int(limit_raw), 12))
+    except ValueError:
+        limit = 6
+
+    base_queryset = BlockReview.objects.filter(
+        is_approved=True,
+        moderation_status=BlockReview.ModerationStatus.APPROVED,
+    )
+
+    summary_queryset = (
+        base_queryset.values("block_name", "neighborhood")
+        .annotate(
+            avg_noise=Avg("noise_rating"),
+            avg_management=Avg("management_rating"),
+            avg_safety=Avg("safety_rating"),
+            avg_transport=Avg("transport_rating"),
+            review_count=Count("block_review_id"),
+        )
+        .annotate(
+            avg_overall=ExpressionWrapper(
+                (
+                    F("avg_noise")
+                    + F("avg_management")
+                    + F("avg_safety")
+                    + F("avg_transport")
+                )
+                / 4.0,
+                output_field=FloatField(),
+            )
+        )
+    )
+
+    latest_comment = Subquery(
+        base_queryset.filter(
+            block_name=OuterRef("block_name"),
+            neighborhood=OuterRef("neighborhood"),
+        )
+        .exclude(comment="")
+        .order_by("-created_at")
+        .values("comment")[:1]
+    )
+    latest_unit_details = Subquery(
+        base_queryset.filter(
+            block_name=OuterRef("block_name"),
+            neighborhood=OuterRef("neighborhood"),
+        )
+        .exclude(unit_details="")
+        .order_by("-created_at")
+        .values("unit_details")[:1]
+    )
+    latest_created_at = Subquery(
+        base_queryset.filter(
+            block_name=OuterRef("block_name"),
+            neighborhood=OuterRef("neighborhood"),
+        )
+        .order_by("-created_at")
+        .values("created_at")[:1]
+    )
+
+    highlights = (
+        summary_queryset.annotate(
+            latest_comment=latest_comment,
+            latest_unit_details=latest_unit_details,
+            latest_created_at=latest_created_at,
+        )
+        .order_by("-avg_overall", "-review_count")[:limit]
+    )
+
+    return Response(list(highlights))

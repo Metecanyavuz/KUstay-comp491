@@ -280,6 +280,11 @@ class Message(models.Model):
         return f"Message from {self.sender} to {self.receiver}"
         
 class BlockReview(models.Model):
+    class ModerationStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
     block_review_id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -288,12 +293,19 @@ class BlockReview(models.Model):
     )
     block_name = models.CharField(max_length=255)
     neighborhood = models.CharField(max_length=255)
+    unit_details = models.CharField(max_length=255, blank=True)
     noise_rating = models.IntegerField()
     management_rating = models.IntegerField()
     safety_rating = models.IntegerField()
     transport_rating = models.IntegerField()
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_approved = models.BooleanField(default=False)
+    moderation_status = models.CharField(
+        max_length=20,
+        choices=ModerationStatus.choices,
+        default=ModerationStatus.PENDING,
+    )
 
     class Meta:
         ordering = ["-created_at"]

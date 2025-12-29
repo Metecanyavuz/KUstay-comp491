@@ -88,9 +88,27 @@ class ReviewAdmin(admin.ModelAdmin):
 
 @admin.register(BlockReview)
 class BlockReviewAdmin(admin.ModelAdmin):
-    list_display = ("block_review_id", "user", "block_name", "neighborhood", "noise_rating", "safety_rating", "created_at")
-    list_filter = ("noise_rating", "management_rating", "safety_rating", "transport_rating")
-    search_fields = ("user__email", "block_name", "neighborhood", "comment")
+    list_display = (
+        "block_review_id",
+        "user",
+        "block_name",
+        "neighborhood",
+        "noise_rating",
+        "safety_rating",
+        "moderation_status",
+        "is_approved",
+        "created_at",
+    )
+    list_filter = (
+        "moderation_status",
+        "is_approved",
+        "noise_rating",
+        "management_rating",
+        "safety_rating",
+        "transport_rating",
+    )
+    search_fields = ("user__email", "block_name", "neighborhood", "unit_details", "comment")
+    list_editable = ("moderation_status", "is_approved")
     readonly_fields = ("created_at",)
 
 
