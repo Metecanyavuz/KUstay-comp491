@@ -2,8 +2,10 @@ import json
 import os
 import uuid
 from decimal import Decimal, InvalidOperation
+import logging
 
-from django.db.models import Q
+from django.conf import settings
+from django.db.models import Avg, Count, ExpressionWrapper, FloatField, F, OuterRef, Q, Subquery
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
@@ -11,6 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.core.files.storage import default_storage
 from datetime import timedelta
+import resend
 
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import (
@@ -23,15 +26,20 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Conversation, Listing, Message, Profile, User
+from .models import BlockReview, Conversation, Listing, Message, Profile, Review, User
 from .serializers import (
     ConversationDetailSerializer,
     ConversationSerializer,
     ListingSerializer,
     MessageSerializer,
     ProfileSerializer,
+    ReviewSerializer,
+    BlockReviewSerializer,
 )
 import re
+
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
+logger = logging.getLogger(__name__)
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -76,6 +84,70 @@ class ListingViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(amenities__icontains=term)
 
         return queryset
+
+    @action(detail=True, methods=["get", "post"], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
+    def reviews(self, request, pk=None):
+        listing = self.get_object()
+
+        existing_review = None
+        if request.user.is_authenticated:
+            existing_review = Review.objects.filter(listing=listing, reviewer=request.user).first()
+
+        if request.method == "GET":
+            approved_reviews = (
+                listing.reviews.filter(
+                    is_approved=True,
+                    moderation_status=Review.ModerationStatus.APPROVED,
+                )
+                .select_related("reviewer", "reviewed_user")
+                .order_by("-created_at")
+            )
+            summary = approved_reviews.aggregate(
+                avg_rating=Avg("rating"),
+                count=Count("review_id"),
+            )
+            return Response(
+                {
+                    "summary": {
+                        "average": summary["avg_rating"],
+                        "count": summary["count"],
+                    },
+                    "reviews": ReviewSerializer(
+                        approved_reviews,
+                        many=True,
+                        context={"request": request},
+                    ).data,
+                    "existing_review": ReviewSerializer(
+                        existing_review,
+                        context={"request": request},
+                    ).data
+                    if existing_review
+                    else None,
+                }
+            )
+
+        if request.user == listing.user:
+            return Response(
+                {"error": "You cannot review your own listing."},
+                status=400,
+            )
+        if existing_review:
+            return Response(
+                {"error": "You have already reviewed this listing."},
+                status=400,
+            )
+
+        serializer = ReviewSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        review = serializer.save(
+            reviewer=request.user,
+            reviewed_user=listing.user,
+            listing=listing,
+        )
+        return Response(
+            ReviewSerializer(review, context={"request": request}).data,
+            status=201,
+        )
 
 
 class ConversationViewSet(
@@ -209,25 +281,25 @@ def signup_view(request):
 
 
 def send_verification_email(user):
-    """Send email verification to KU students"""
+    """Send email verification to KU students using Resend"""
+    logger.info("=== Starting email verification process for %s ===", user.email)
+
     verification_token = get_random_string(64)
     user.verification_token = verification_token
     user.save()
-    
+
     # Frontend URL - change this to your production URL when deploying
-    verify_url = f"http://localhost:3000/verify-email?token={verification_token}"
-    
+    verify_url = f"{FRONTEND_BASE_URL.rstrip('/')}/verify-email?token={verification_token}"
+
     # Email subject
     subject = 'Verify Your KUstay Account'
-    
-    # Plain text message
-    message = f'''
-Hello {user.username},
+
+    # Plain text fallback (helps some clients and makes link obvious)
+    text_message = f"""Hello {user.username},
 
 Welcome to KUstay! Please verify your email address to access all features of the platform.
 
-Click the link below to verify your email:
-{verify_url}
+Verify your email: {verify_url}
 
 This link will expire in 24 hours.
 
@@ -235,56 +307,81 @@ If you did not create this account, please ignore this email.
 
 Best regards,
 KUstay Team
-    '''
-    
-    # HTML message (optional but looks better)
-    html_message = f'''
-    <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #667eea;">Welcome to KUstay!</h2>
-                <p>Hello <strong>{user.username}</strong>,</p>
-                <p>Thank you for joining KUstay. Please verify your email address to access all features of the platform.</p>
-                <div style="margin: 30px 0;">
-                    <a href="{verify_url}" 
-                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                              color: white;
-                              padding: 12px 30px;
-                              text-decoration: none;
-                              border-radius: 5px;
-                              display: inline-block;">
-                        Verify Email Address
-                    </a>
-                </div>
-                <p style="color: #666; font-size: 14px;">
-                    This link will expire in 24 hours.
-                </p>
-                <p style="color: #666; font-size: 14px;">
-                    If you did not create this account, please ignore this email.
-                </p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="color: #999; font-size: 12px;">
-                    Best regards,<br>
-                    KUstay Team
-                </p>
-            </div>
-        </body>
-    </html>
-    '''
-    
-    # Send email
+"""
+
+    # HTML message - Gmail-compatible version with KU brand colors
+    html_message = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #231f20; margin: 0; padding: 0; background-color: #fff4f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fff4f5;">
+        <tr>
+            <td align="center" style="padding: 20px;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border: 1px solid #e4c9cf;">
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="color: #c3112e; margin: 0 0 20px 0; font-size: 24px;">Welcome to KUstay!</h2>
+                            <p style="margin: 0 0 15px 0; color: #231f20; font-size: 16px;">Hello <strong>{user.username}</strong>,</p>
+                            <p style="margin: 0 0 25px 0; color: #231f20; font-size: 16px;">Thank you for joining KUstay. Please verify your email address to access all features of the platform.</p>
+
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{verify_url}" target="_blank" rel="noopener noreferrer" style="background-color: #c3112e; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">Verify Email Address</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 20px 0 10px 0; color: #5c474a; font-size: 14px;">Or copy and paste this link into your browser:</p>
+                            <p style="margin: 0 0 30px 0; word-break: break-all; color: #c3112e; font-size: 14px;">{verify_url}</p>
+
+                            <p style="margin: 0 0 10px 0; color: #5c474a; font-size: 14px;">This link will expire in 24 hours.</p>
+                            <p style="margin: 0 0 30px 0; color: #5c474a; font-size: 14px;">If you did not create this account, please ignore this email.</p>
+
+                            <hr style="border: none; border-top: 1px solid #e4c9cf; margin: 20px 0;">
+
+                            <p style="margin: 0; color: #5c474a; font-size: 12px;">Best regards,<br>KUstay Team</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>'''
+
+    # Send email using Resend
+    from_email = settings.DEFAULT_FROM_EMAIL or 'KUstay <onboarding@resend.dev>'
+
+    logger.info("Using Resend API for email delivery")
+    logger.info("From email: %s", from_email)
+    logger.info("To email: %s", user.email)
+    logger.info("Resend API key configured: %s", bool(settings.RESEND_API_KEY))
+
     try:
-        from django.core.mail import send_mail
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email='noreply@kustay.com',
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
+        # Set Resend API key
+        resend.api_key = settings.RESEND_API_KEY
+
+        # Send email via Resend
+        params = {
+            "from": from_email,
+            "to": [user.email],
+            "subject": subject,
+            "text": text_message,
+            "html": html_message,
+        }
+
+        logger.info("Sending email via Resend API...")
+        email_response = resend.Emails.send(params)
+        logger.info("Verification email sent successfully to %s. Response: %s", user.email, email_response)
+
     except Exception as e:
-        print(f"Error sending verification email: {e}")
+        # Log and continue so signup flow doesn't hang on email issues
+        logger.error("Error type: %s", type(e).__name__)
+        logger.exception("Error sending verification email to %s", user.email)
 
 
 @api_view(['POST'])
@@ -349,17 +446,59 @@ def forgot_password_view(request):
         user.save()
         
         # Create reset URL
-        reset_url = f"http://localhost:3000/reset-password?token={reset_token}"
-        
-        # Send email
-        send_mail(
-            'Password Reset Request',
-            f'Click the link to reset your password: {reset_url}\n\nThis link expires in 1 hour.',
-            'noreply@kustay.com',
-            [email],
-            fail_silently=False,
-        )
-        
+        reset_url = f"{FRONTEND_BASE_URL.rstrip('/')}/reset-password?token={reset_token}"
+
+        # Send email using Resend
+        from_email = settings.DEFAULT_FROM_EMAIL or 'KUstay <onboarding@resend.dev>'
+
+        html_message = f'''
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #667eea;">Password Reset Request</h2>
+                    <p>You have requested to reset your password.</p>
+                    <p>Click the button below to reset your password:</p>
+                    <div style="margin: 30px 0;">
+                        <a href="{reset_url}"
+                           style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                  color: white;
+                                  padding: 12px 30px;
+                                  text-decoration: none;
+                                  border-radius: 5px;
+                                  display: inline-block;">
+                            Reset Password
+                        </a>
+                    </div>
+                    <p style="color: #666; font-size: 14px;">
+                        This link will expire in 1 hour.
+                    </p>
+                    <p style="color: #666; font-size: 14px;">
+                        If you did not request this, please ignore this email.
+                    </p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="color: #999; font-size: 12px;">
+                        Best regards,<br>
+                        KUstay Team
+                    </p>
+                </div>
+            </body>
+        </html>
+        '''
+
+        try:
+            resend.api_key = settings.RESEND_API_KEY
+            params = {
+                "from": from_email,
+                "to": [email],
+                "subject": "Password Reset Request",
+                "html": html_message,
+            }
+            email_response = resend.Emails.send(params)
+            logger.info("Password reset email sent successfully to %s. Response: %s", email, email_response)
+        except Exception as e:
+            logger.exception("Error sending password reset email to %s", email)
+            return Response({'error': 'Failed to send email'}, status=500)
+
         return Response({'message': 'Reset email sent'}, status=200)
     except User.DoesNotExist:
         # Return success even if user doesn't exist (security best practice)
@@ -540,3 +679,234 @@ def user_profile_view(request, user_id):
         return Response({'error': 'Profile not found'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def block_reviews_view(request):
+    if request.method == 'GET':
+        queryset = (
+            BlockReview.objects.filter(
+                is_approved=True,
+                moderation_status=BlockReview.ModerationStatus.APPROVED,
+            )
+            .select_related("user")
+            .order_by("-created_at")
+        )
+
+        block_name = (request.query_params.get('block_name') or '').strip()
+        neighborhood = (request.query_params.get('neighborhood') or '').strip()
+        if block_name:
+            queryset = queryset.filter(block_name__iexact=block_name)
+        if neighborhood:
+            queryset = queryset.filter(neighborhood__iexact=neighborhood)
+
+        summary = queryset.aggregate(
+            avg_noise=Avg("noise_rating"),
+            avg_management=Avg("management_rating"),
+            avg_safety=Avg("safety_rating"),
+            avg_transport=Avg("transport_rating"),
+            count=Count("block_review_id"),
+        )
+
+        overall = None
+        if summary["count"]:
+            overall = (
+                (summary["avg_noise"] or 0)
+                + (summary["avg_management"] or 0)
+                + (summary["avg_safety"] or 0)
+                + (summary["avg_transport"] or 0)
+            ) / 4
+
+        return Response(
+            {
+                "summary": {
+                    "average": overall,
+                    "count": summary["count"],
+                    "avg_noise": summary["avg_noise"],
+                    "avg_management": summary["avg_management"],
+                    "avg_safety": summary["avg_safety"],
+                    "avg_transport": summary["avg_transport"],
+                },
+                "reviews": BlockReviewSerializer(
+                    queryset,
+                    many=True,
+                    context={"request": request},
+                ).data,
+            }
+        )
+
+    if not request.user.is_authenticated:
+        return Response({'error': 'Authentication required.'}, status=401)
+
+    data = request.data.copy()
+    block_name = (data.get('block_name') or '').strip()
+    neighborhood = (data.get('neighborhood') or '').strip()
+
+    if not block_name or not neighborhood:
+        return Response(
+            {'error': 'block_name and neighborhood are required.'},
+            status=400,
+        )
+
+    existing = BlockReview.objects.filter(
+        user=request.user,
+        block_name__iexact=block_name,
+        neighborhood__iexact=neighborhood,
+    ).first()
+    if existing:
+        return Response(
+            {'error': 'You already reviewed this building.'},
+            status=400,
+        )
+
+    serializer = BlockReviewSerializer(data=data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    review = serializer.save(user=request.user)
+    return Response(
+        BlockReviewSerializer(review, context={"request": request}).data,
+        status=201,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def block_review_highlights(request):
+    limit_raw = request.query_params.get('limit', '6')
+    try:
+        limit = max(1, min(int(limit_raw), 12))
+    except ValueError:
+        limit = 6
+
+    base_queryset = BlockReview.objects.filter(
+        is_approved=True,
+        moderation_status=BlockReview.ModerationStatus.APPROVED,
+    )
+
+    summary_queryset = (
+        base_queryset.values("block_name", "neighborhood")
+        .annotate(
+            avg_noise=Avg("noise_rating"),
+            avg_management=Avg("management_rating"),
+            avg_safety=Avg("safety_rating"),
+            avg_transport=Avg("transport_rating"),
+            review_count=Count("block_review_id"),
+        )
+        .annotate(
+            avg_overall=ExpressionWrapper(
+                (
+                    F("avg_noise")
+                    + F("avg_management")
+                    + F("avg_safety")
+                    + F("avg_transport")
+                )
+                / 4.0,
+                output_field=FloatField(),
+            )
+        )
+    )
+
+    latest_comment = Subquery(
+        base_queryset.filter(
+            block_name=OuterRef("block_name"),
+            neighborhood=OuterRef("neighborhood"),
+        )
+        .exclude(comment="")
+        .order_by("-created_at")
+        .values("comment")[:1]
+    )
+    latest_unit_details = Subquery(
+        base_queryset.filter(
+            block_name=OuterRef("block_name"),
+            neighborhood=OuterRef("neighborhood"),
+        )
+        .exclude(unit_details="")
+        .order_by("-created_at")
+        .values("unit_details")[:1]
+    )
+    latest_created_at = Subquery(
+        base_queryset.filter(
+            block_name=OuterRef("block_name"),
+            neighborhood=OuterRef("neighborhood"),
+        )
+        .order_by("-created_at")
+        .values("created_at")[:1]
+    )
+
+    highlights = (
+        summary_queryset.annotate(
+            latest_comment=latest_comment,
+            latest_unit_details=latest_unit_details,
+            latest_created_at=latest_created_at,
+        )
+        .order_by("-avg_overall", "-review_count")[:limit]
+    )
+
+    return Response(list(highlights))
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def block_review_buildings(request):
+    queryset = BlockReview.objects.filter(
+        is_approved=True,
+        moderation_status=BlockReview.ModerationStatus.APPROVED,
+    )
+
+    summary_queryset = (
+        queryset.values('block_name', 'neighborhood')
+        .annotate(
+            avg_noise=Avg('noise_rating'),
+            avg_management=Avg('management_rating'),
+            avg_safety=Avg('safety_rating'),
+            avg_transport=Avg('transport_rating'),
+            review_count=Count('block_review_id'),
+        )
+        .annotate(
+            avg_overall=ExpressionWrapper(
+                (
+                    F('avg_noise')
+                    + F('avg_management')
+                    + F('avg_safety')
+                    + F('avg_transport')
+                )
+                / 4.0,
+                output_field=FloatField(),
+            )
+        )
+    )
+
+    latest_comment = Subquery(
+        queryset.filter(
+            block_name=OuterRef('block_name'),
+            neighborhood=OuterRef('neighborhood'),
+        )
+        .exclude(comment='')
+        .order_by('-created_at')
+        .values('comment')[:1]
+    )
+    latest_unit_details = Subquery(
+        queryset.filter(
+            block_name=OuterRef('block_name'),
+            neighborhood=OuterRef('neighborhood'),
+        )
+        .exclude(unit_details='')
+        .order_by('-created_at')
+        .values('unit_details')[:1]
+    )
+    latest_created_at = Subquery(
+        queryset.filter(
+            block_name=OuterRef('block_name'),
+            neighborhood=OuterRef('neighborhood'),
+        )
+        .order_by('-created_at')
+        .values('created_at')[:1]
+    )
+
+    buildings = summary_queryset.annotate(
+        latest_comment=latest_comment,
+        latest_unit_details=latest_unit_details,
+        latest_created_at=latest_created_at,
+    ).order_by('block_name', 'neighborhood')
+
+    return Response(list(buildings))

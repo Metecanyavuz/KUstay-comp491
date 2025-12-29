@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, Home, MessageCircle, User, LogOut, UserPlus, LogIn } from 'lucide-react';
+import { Menu, X, Home, MessageCircle, Star, User, LogOut, UserPlus, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Navigation.css';
 
@@ -36,6 +36,10 @@ function Navigation() {
           {user && (
             <>
               <a href="/matches" className="nav-link">Matches</a>
+              <a href="/reviews" className="nav-link">
+                <Star size={18} />
+                <span>Reviews</span>
+              </a>
               <a href="/conversations" className="nav-link">
                 <MessageCircle size={18} />
                 <span>Messages</span>
@@ -86,6 +90,7 @@ function Navigation() {
           {user && (
             <>
               <a href="/matches" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Matches</a>
+              <a href="/reviews" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Reviews</a>
               <a href="/conversations" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Messages</a>
               <a href="/profile" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Profile</a>
               <button onClick={handleLogout} className="mobile-nav-link logout-btn">

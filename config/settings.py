@@ -29,12 +29,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-3@i7s8dg*p#4fzpq=)ymh59bv%+6*_)^4w8q8dhy5&s1eu6=k7"
+SECRET_KEY = os.getenv('SECRET_KEY', "django-insecure-3@i7s8dg*p#4fzpq=)ymh59bv%+6*_)^4w8q8dhy5&s1eu6=k7")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+# Parse comma-separated ALLOWED_HOSTS from environment variable
+def read_list(var_name: str, defaults: list[str]) -> list[str]:
+    """Read comma-separated env var and merge with defaults while keeping order/uniques."""
+    raw = os.getenv(var_name, "")
+    items = [item.strip() for item in raw.split(",") if item.strip()]
+    merged: list[str] = []
+    for item in items + defaults:
+        if item and item not in merged:
+            merged.append(item)
+    return merged
+
+
+default_allowed_hosts = [
+    "localhost",
+    "127.0.0.1",
+    "kustay-comp491-production.up.railway.app",
+    "491-frontend.up.railway.app",
+]
+ALLOWED_HOSTS = read_list("ALLOWED_HOSTS", default_allowed_hosts)
 
 
 # Application definition
@@ -54,6 +72,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Add WhiteNoise for static files
     "corsheaders.middleware.CorsMiddleware",  # Add this BEFORE CommonMiddleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -93,15 +112,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 #     }
 # }
 
+# Database configuration
+# For production, DATABASE_URL must be set in environment
+# For local development, fallback to local PostgreSQL
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgres://kustay_user:kustay_password@127.0.0.1:5433/kustay_db"
+)
+
 DATABASES = {
-    "default": dj_database_url.parse(
-        os.getenv(
-            "DATABASE_URL",
-            # Safe fallback (your working Docker mapping on 5433)
-            "postgres://kustay_user:kustay_password@127.0.0.1:5433/kustay_db",
-        ),
-        conn_max_age=600,
-    )
+    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)
 }
 
 
@@ -143,8 +163,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# WhiteNoise configuration for static files
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -156,33 +187,52 @@ LOGIN_REDIRECT_URL = "home"
 
 # Email Configuration
 # For development: emails will be printed to console
-#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# For production with Gmail (uncomment and fill in):
+# For production with Resend (recommended for Railway deployment)
+# Resend uses HTTP API instead of SMTP, so we configure it via environment variable
+# Updated: 2025-12-27 - Force rebuild
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'KUstay <onboarding@resend.dev>')
+
+# SMTP settings (not used with Resend, but kept for Django compatibility)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.resend.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')  # Your Gmail address
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')  # App password
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '')
+EMAIL_HOST_USER = 'resend'
+EMAIL_HOST_PASSWORD = os.getenv('RESEND_API_KEY', '')
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '30'))
 
-# For production with custom SMTP server:
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.yourdomain.com')
-# EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-# EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'kustayapp@')
-# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'vrvj olnd knia tmeu')
-# DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@kustay.com')
+# CSRF & CORS Configuration
+# Parse from environment variables with fallback to localhost
+default_csrf_trusted_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://kustay-comp491-production.up.railway.app",
+    "https://491-frontend.up.railway.app",
+    "https://*.up.railway.app",
+]
+CSRF_TRUSTED_ORIGINS = read_list("CSRF_TRUSTED_ORIGINS", default_csrf_trusted_origins)
 
-# Add these for proper CSRF handling with React
-CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
+# Allow API calls from the deployed frontend by default
+default_cors_allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://491-frontend.up.railway.app",
+]
+CORS_ALLOWED_ORIGINS = read_list("CORS_ALLOWED_ORIGINS", default_cors_allowed_origins)
 
-# Session settings
+CORS_ALLOW_CREDENTIALS = True
+
+# Session and Cookie settings
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
+
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF token
 CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False') == 'True'
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -190,17 +240,3 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ],
 }
-
-# CSRF settings
-CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
-CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF token
-CSRF_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-
-# CORS settings (if you install django-cors-headers)
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-]

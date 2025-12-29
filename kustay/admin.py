@@ -12,7 +12,7 @@ class UserAdmin(BaseUserAdmin):
     list_filter = ("user_type", "is_verified", "is_staff", "is_superuser")
     search_fields = ("email", "username", "first_name", "last_name")
     ordering = ("-created_at",)
-    
+
     fieldsets = (
         (None, {"fields": ("email", "username", "password")}),
         ("Personal Info", {"fields": ("first_name", "last_name")}),
@@ -20,7 +20,7 @@ class UserAdmin(BaseUserAdmin):
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important Dates", {"fields": ("last_login", "date_joined")}),
     )
-    
+
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
@@ -88,9 +88,27 @@ class ReviewAdmin(admin.ModelAdmin):
 
 @admin.register(BlockReview)
 class BlockReviewAdmin(admin.ModelAdmin):
-    list_display = ("block_review_id", "user", "block_name", "neighborhood", "noise_rating", "safety_rating", "created_at")
-    list_filter = ("noise_rating", "management_rating", "safety_rating", "transport_rating")
-    search_fields = ("user__email", "block_name", "neighborhood", "comment")
+    list_display = (
+        "block_review_id",
+        "user",
+        "block_name",
+        "neighborhood",
+        "noise_rating",
+        "safety_rating",
+        "moderation_status",
+        "is_approved",
+        "created_at",
+    )
+    list_filter = (
+        "moderation_status",
+        "is_approved",
+        "noise_rating",
+        "management_rating",
+        "safety_rating",
+        "transport_rating",
+    )
+    search_fields = ("user__email", "block_name", "neighborhood", "unit_details", "comment")
+    list_editable = ("moderation_status", "is_approved")
     readonly_fields = ("created_at",)
 
 
