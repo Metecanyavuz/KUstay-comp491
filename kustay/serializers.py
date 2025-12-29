@@ -174,6 +174,27 @@ class ProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['profile_id', 'updated_at']
 
+        read_only_fields = ['profile_id', 'updated_at']
+
+    def to_internal_value(self, data):
+        # Handle multipart/form-data where JSON fields are strings
+        # Convert to plain dict to avoid QueryDict treating list values as multiple parameters
+        if hasattr(data, 'dict'):
+            data = data.dict()
+        elif hasattr(data, 'copy'):
+            data = data.copy()
+
+        if 'preferred_neighborhoods' in data and isinstance(data['preferred_neighborhoods'], str):
+            try:
+                import json
+                data['preferred_neighborhoods'] = json.loads(data['preferred_neighborhoods'])
+            except (ValueError, TypeError):
+                # If parsing fails, let standard validation handle the error
+                pass
+                
+        return super().to_internal_value(data)
+
+
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = serializers.SerializerMethodField()

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  User, 
-  Mail, 
-  Phone, 
+import {
+  User,
+  Mail,
+  Phone,
   Calendar,
   DollarSign,
   Home,
@@ -21,6 +21,8 @@ import {
 import './Profile.css';
 
 import { getCSRFToken } from '../../utils/csrf';
+import LocationSelector from '../Shared/LocationSelector';
+
 
 function Profile() {
   const { user, checkAuth } = useAuth();
@@ -42,7 +44,7 @@ function Profile() {
     faculty: '',
     budget_min: '',
     budget_max: '',
-    preferred_neighborhoods: '',
+    preferred_neighborhoods: [],
     move_in_date: '',
     smoker: false,
     pets: false,
@@ -112,8 +114,10 @@ function Profile() {
     budget_min: data.budget_min || '',
     budget_max: data.budget_max || '',
     preferred_neighborhoods: Array.isArray(data.preferred_neighborhoods)
-      ? data.preferred_neighborhoods.join(', ')
-      : '',
+      ? data.preferred_neighborhoods
+      : data.preferred_neighborhoods
+        ? [data.preferred_neighborhoods] // Fallback for single string
+        : [],
     move_in_date: data.move_in_date || '',
     smoker: data.smoker || false,
     pets: data.pets || false,
@@ -134,13 +138,13 @@ function Profile() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
-        
+
         // Set form data with fetched profile
         setFormData(mapProfileToForm(data));
         setPhotoFile(null);
         setPhotoPreview('');
         setPhotoError(false);
-        
+
         setIsEditing(false);
       } else if (response.status === 404) {
         // Profile doesn't exist yet, show form
@@ -163,6 +167,13 @@ function Profile() {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleNeighborhoodsChange = (newNeighborhoods) => {
+    setFormData(prev => ({
+      ...prev,
+      preferred_neighborhoods: newNeighborhoods
     }));
   };
 
@@ -197,14 +208,8 @@ function Profile() {
     setSaving(true);
     setError(null);
     setSuccessMessage('');
-  
-    try {
-      // Parse preferred_neighborhoods from comma-separated string to array
-      const neighborhoods = formData.preferred_neighborhoods
-        .split(',')
-        .map(n => n.trim())
-        .filter(n => n);
 
+    try {
       const dataToSend = new FormData();
       dataToSend.append('first_name', formData.first_name);
       dataToSend.append('last_name', formData.last_name);
@@ -213,7 +218,7 @@ function Profile() {
       dataToSend.append('faculty', formData.faculty);
       dataToSend.append('budget_min', formData.budget_min || 0);
       dataToSend.append('budget_max', formData.budget_max || 0);
-      dataToSend.append('preferred_neighborhoods', JSON.stringify(neighborhoods));
+      dataToSend.append('preferred_neighborhoods', JSON.stringify(formData.preferred_neighborhoods));
       dataToSend.append('move_in_date', formData.move_in_date || '');
       dataToSend.append('smoker', formData.smoker);
       dataToSend.append('pets', formData.pets);
@@ -225,7 +230,7 @@ function Profile() {
       if (photoFile) {
         dataToSend.set('profile_photo', photoFile);
       }
-  
+
       const response = await fetch('/api/profile/', {
         method: 'POST',
         headers: {
@@ -234,7 +239,7 @@ function Profile() {
         credentials: 'include',
         body: dataToSend,
       });
-  
+
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
@@ -245,14 +250,14 @@ function Profile() {
         setSuccessMessage('Profile saved successfully!');
         setIsEditing(false);
         await checkAuth();
-        
+
         setTimeout(() => {
           window.location.href = '/matches';
         }, 2000);
       } else {
         const errorData = await response.json();
         console.error('Server error:', errorData);
-        
+
         // Format error message nicely
         if (typeof errorData.error === 'object') {
           const errorMessages = Object.entries(errorData.error)
@@ -302,8 +307,8 @@ function Profile() {
           <div className="header-content">
             {renderAvatar()}
             <div className="user-info">
-              <h1>{formData.first_name && formData.last_name 
-                ? `${formData.first_name} ${formData.last_name}` 
+              <h1>{formData.first_name && formData.last_name
+                ? `${formData.first_name} ${formData.last_name}`
                 : user.email}</h1>
               <p className="user-type">{user.user_type === 'KU_Student' ? 'KU Student' : 'External Student'}</p>
               {user.user_type === 'KU_Student' && (
@@ -502,16 +507,11 @@ function Profile() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="preferred_neighborhoods">Preferred Neighborhoods</label>
-                <input
-                  type="text"
-                  id="preferred_neighborhoods"
-                  name="preferred_neighborhoods"
-                  value={formData.preferred_neighborhoods}
-                  onChange={handleChange}
-                  placeholder="Etiler, Zekeriyaköy, Bebek (comma separated)"
+                <label>Preferred Neighborhoods</label>
+                <LocationSelector
+                  selectedNeighborhoods={formData.preferred_neighborhoods}
+                  onChange={handleNeighborhoodsChange}
                 />
-                <small>Enter neighborhoods separated by commas</small>
               </div>
 
               <div className="form-row">
@@ -697,13 +697,15 @@ function Profile() {
                 {formData.preferred_neighborhoods && (
                   <div className="info-item">
                     <label>Preferred Neighborhoods</label>
-                    <p>{formData.preferred_neighborhoods}</p>
+                    <p>{Array.isArray(formData.preferred_neighborhoods)
+                      ? formData.preferred_neighborhoods.join(', ')
+                      : formData.preferred_neighborhoods}</p>
                   </div>
                 )}
                 <div className="info-item">
                   <label>Room Type</label>
-                  <p>{formData.room_type_preference === 'private' ? 'Private Room' : 
-                     formData.room_type_preference === 'shared' ? 'Shared Room' : 'Entire Place'}</p>
+                  <p>{formData.room_type_preference === 'private' ? 'Private Room' :
+                    formData.room_type_preference === 'shared' ? 'Shared Room' : 'Entire Place'}</p>
                 </div>
                 {formData.move_in_date && (
                   <div className="info-item">
@@ -723,8 +725,8 @@ function Profile() {
               <div className="info-grid">
                 <div className="info-item">
                   <label>Sleep Schedule</label>
-                  <p>{formData.sleep_schedule === 'early_bird' ? 'Early Bird' : 
-                     formData.sleep_schedule === 'night_owl' ? 'Night Owl' : 'Flexible'}</p>
+                  <p>{formData.sleep_schedule === 'early_bird' ? 'Early Bird' :
+                    formData.sleep_schedule === 'night_owl' ? 'Night Owl' : 'Flexible'}</p>
                 </div>
                 <div className="info-item">
                   <label>Cleanliness Level</label>
