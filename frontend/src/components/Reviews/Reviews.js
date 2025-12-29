@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MapPin, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getCSRFToken } from '../../utils/csrf';
 import { BUILDING_OPTIONS } from '../../data/buildings';
@@ -7,9 +8,9 @@ import './Reviews.css';
 
 function Reviews() {
   const { user } = useAuth();
-  const [reviewHighlights, setReviewHighlights] = useState([]);
-  const [reviewsLoading, setReviewsLoading] = useState(true);
-  const [reviewsError, setReviewsError] = useState('');
+  const [buildingGroups, setBuildingGroups] = useState([]);
+  const [buildingsLoading, setBuildingsLoading] = useState(true);
+  const [buildingsError, setBuildingsError] = useState('');
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('');
   const [customBuilding, setCustomBuilding] = useState('');
@@ -26,21 +27,21 @@ function Reviews() {
   const [reviewNotice, setReviewNotice] = useState('');
 
   useEffect(() => {
-    fetch('/api/block-reviews/highlights/?limit=12', { credentials: 'include' })
+    fetch('/api/block-reviews/buildings/', { credentials: 'include' })
       .then((response) => {
         if (!response.ok) {
-          throw new Error('Failed to load reviews');
+          throw new Error('Failed to load buildings');
         }
         return response.json();
       })
       .then((data) => {
-        setReviewHighlights(Array.isArray(data) ? data : []);
-        setReviewsLoading(false);
+        setBuildingGroups(Array.isArray(data) ? data : []);
+        setBuildingsLoading(false);
       })
       .catch((err) => {
         console.error(err);
-        setReviewsError('Unable to load reviews right now.');
-        setReviewsLoading(false);
+        setBuildingsError('Unable to load buildings right now.');
+        setBuildingsLoading(false);
       });
   }, []);
 
@@ -66,6 +67,16 @@ function Reviews() {
     } catch (error) {
       return '';
     }
+  };
+
+  const buildReviewLink = (blockName, neighborhood) => {
+    const encodedName = encodeURIComponent(blockName);
+    const params = new URLSearchParams();
+    if (neighborhood) {
+      params.set('neighborhood', neighborhood);
+    }
+    const query = params.toString();
+    return query ? `/reviews/${encodedName}?${query}` : `/reviews/${encodedName}`;
   };
 
   const handleBuildingChange = (event) => {
@@ -206,31 +217,30 @@ function Reviews() {
         <div className="reviews-content">
           <div className="reviews-header">
             <div>
-              <h2>Recent highlights</h2>
-              <span className="block-review-muted">Verified feedback from fellow students</span>
+              <h2>Browse by building</h2>
+              <span className="block-review-muted">All buildings with approved reviews</span>
             </div>
           </div>
 
-          {reviewsLoading ? (
-            <div className="loading">Loading reviews...</div>
-          ) : reviewsError ? (
-            <div className="block-review-muted">{reviewsError}</div>
-          ) : reviewHighlights.length ? (
+          {buildingsLoading ? (
+            <div className="loading">Loading buildings...</div>
+          ) : buildingsError ? (
+            <div className="block-review-muted">{buildingsError}</div>
+          ) : buildingGroups.length ? (
             <div className="reviews-grid">
-              {reviewHighlights.map((review) => {
-                const score = review.avg_overall ? Number(review.avg_overall) : 0;
-                const avgNoise = review.avg_noise ? Number(review.avg_noise) : 0;
-                const avgManagement = review.avg_management ? Number(review.avg_management) : 0;
-                const avgSafety = review.avg_safety ? Number(review.avg_safety) : 0;
-                const avgTransport = review.avg_transport ? Number(review.avg_transport) : 0;
+              {buildingGroups.map((building) => {
+                const score = building.avg_overall ? Number(building.avg_overall) : 0;
                 return (
-                  <div key={`${review.block_name}-${review.neighborhood}`} className="block-review-card">
+                  <div
+                    key={`${building.block_name}-${building.neighborhood}`}
+                    className="block-review-card compact"
+                  >
                     <div className="block-review-card-header">
                       <div>
-                        <h3>{review.block_name}</h3>
+                        <h3>{building.block_name}</h3>
                         <p className="block-review-location">
                           <MapPin size={14} />
-                          {review.neighborhood}
+                          {building.neighborhood}
                         </p>
                       </div>
                       <div className="block-review-score">
@@ -238,32 +248,32 @@ function Reviews() {
                         <span>{score ? score.toFixed(1) : '-'}</span>
                       </div>
                     </div>
-                    {review.latest_comment ? (
-                      <p className="block-review-comment">"{review.latest_comment}"</p>
+                    {building.latest_comment ? (
+                      <p className="block-review-comment">"{building.latest_comment}"</p>
                     ) : (
                       <p className="block-review-muted">No comments yet.</p>
                     )}
-                    {review.latest_unit_details && (
+                    {building.latest_unit_details && (
                       <p className="block-review-unit">
-                        Unit: {review.latest_unit_details}
+                        Unit: {building.latest_unit_details}
                       </p>
                     )}
                     <div className="block-review-meta">
-                      <span>{review.review_count} review{review.review_count === 1 ? '' : 's'}</span>
-                      <span>{formatReviewDate(review.latest_created_at)}</span>
+                      <span>{building.review_count} review{building.review_count === 1 ? '' : 's'}</span>
+                      <span>{formatReviewDate(building.latest_created_at)}</span>
                     </div>
-                    <div className="block-review-breakdown">
-                      <span>Noise {avgNoise.toFixed(1)}</span>
-                      <span>Mgmt {avgManagement.toFixed(1)}</span>
-                      <span>Safety {avgSafety.toFixed(1)}</span>
-                      <span>Transport {avgTransport.toFixed(1)}</span>
-                    </div>
+                    <Link
+                      className="review-detail-link"
+                      to={buildReviewLink(building.block_name, building.neighborhood)}
+                    >
+                      View building reviews
+                    </Link>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="block-review-muted">No reviews yet.</div>
+            <div className="block-review-muted">No building reviews yet.</div>
           )}
         </div>
 

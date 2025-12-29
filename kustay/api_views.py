@@ -843,3 +843,70 @@ def block_review_highlights(request):
     )
 
     return Response(list(highlights))
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def block_review_buildings(request):
+    queryset = BlockReview.objects.filter(
+        is_approved=True,
+        moderation_status=BlockReview.ModerationStatus.APPROVED,
+    )
+
+    summary_queryset = (
+        queryset.values('block_name', 'neighborhood')
+        .annotate(
+            avg_noise=Avg('noise_rating'),
+            avg_management=Avg('management_rating'),
+            avg_safety=Avg('safety_rating'),
+            avg_transport=Avg('transport_rating'),
+            review_count=Count('block_review_id'),
+        )
+        .annotate(
+            avg_overall=ExpressionWrapper(
+                (
+                    F('avg_noise')
+                    + F('avg_management')
+                    + F('avg_safety')
+                    + F('avg_transport')
+                )
+                / 4.0,
+                output_field=FloatField(),
+            )
+        )
+    )
+
+    latest_comment = Subquery(
+        queryset.filter(
+            block_name=OuterRef('block_name'),
+            neighborhood=OuterRef('neighborhood'),
+        )
+        .exclude(comment='')
+        .order_by('-created_at')
+        .values('comment')[:1]
+    )
+    latest_unit_details = Subquery(
+        queryset.filter(
+            block_name=OuterRef('block_name'),
+            neighborhood=OuterRef('neighborhood'),
+        )
+        .exclude(unit_details='')
+        .order_by('-created_at')
+        .values('unit_details')[:1]
+    )
+    latest_created_at = Subquery(
+        queryset.filter(
+            block_name=OuterRef('block_name'),
+            neighborhood=OuterRef('neighborhood'),
+        )
+        .order_by('-created_at')
+        .values('created_at')[:1]
+    )
+
+    buildings = summary_queryset.annotate(
+        latest_comment=latest_comment,
+        latest_unit_details=latest_unit_details,
+        latest_created_at=latest_created_at,
+    ).order_by('block_name', 'neighborhood')
+
+    return Response(list(buildings))
