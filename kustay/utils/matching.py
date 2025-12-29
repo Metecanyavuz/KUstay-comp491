@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Tuple
 
@@ -30,7 +31,7 @@ def get_candidate_users(for_user) -> QuerySet:
     Filters:
         * No self-match.
         * Exclude blocked users (both directions).
-        * Require overlapping budget bands when available.
+        * Soft budget feasibility filter (allows a buffer to avoid false negatives).
         * Hook for future campus/city filters via `feasibility_filters`.
     """
     UserModel = get_user_model()
@@ -58,11 +59,14 @@ def get_candidate_users(for_user) -> QuerySet:
         base_qs = base_qs.exclude(pk__in=blocked_ids)
 
     user_min, user_max = _normalize_budget_range(requester_profile)
-    # Require budget overlap only when the requester provided a bounded range.
+    # Soft budget filter: allow a 15% buffer around the requester's range to keep near-misses.
     if user_min is not None and user_max is not None and user_max < BUDGET_MAX_FALLBACK:
+        buffer_pct = Decimal("0.15")
+        lower_bound = max(Decimal("0"), user_min * (Decimal("1") - buffer_pct))
+        upper_bound = user_max * (Decimal("1") + buffer_pct)
         base_qs = base_qs.filter(
-            profile__budget_max__gte=user_min,
-            profile__budget_min__lte=user_max,
+            profile__budget_max__gte=lower_bound,
+            profile__budget_min__lte=upper_bound,
         )
 
     # Placeholder for future feasibility hooks (campus/city, etc.)
@@ -76,9 +80,7 @@ def compute_compatibility(
     profile1: Profile, profile2: Profile
 ) -> Tuple[int, Dict[str, Dict[str, object]]]:
     """
-    Deterministic compatibility score between two profiles with an explainable breakdown.
-    Scores are capped to [0, 100] and leverage content-based heuristics so ML/CF models
-    can be layered in later without touching call sites.
+    One-directional compatibility (profile1 -> profile2). Keeps existing weighted blend.
     """
     breakdown: Dict[str, Dict[str, object]] = {}
     total_score = 0
@@ -139,6 +141,29 @@ def compute_compatibility(
     return final_score, breakdown
 
 
+def compute_mutual_compatibility(
+    profile1: Profile, profile2: Profile
+) -> Tuple[int, Dict[str, Dict[str, object]]]:
+    """
+    Reciprocal score using geometric mean to penalize one-sided fits.
+    """
+    score_ab, breakdown_ab = compute_compatibility(profile1, profile2)
+    score_ba, breakdown_ba = compute_compatibility(profile2, profile1)
+
+    mutual_score = int(round(math.sqrt(score_ab * score_ba)))
+    combined_breakdown: Dict[str, Dict[str, object]] = {
+        "user_to_candidate": breakdown_ab,
+        "candidate_to_user": breakdown_ba,
+        "reciprocity": {
+            "score": mutual_score,
+            "reason": (
+                "Geometric mean of both directions; lopsided matches are downgraded."
+            ),
+        },
+    }
+    return mutual_score, combined_breakdown
+
+
 def calculate_matches_for_user(user) -> int:
     """
     Calculates or refreshes match scores for a given user. Returns number of matches updated.
@@ -158,7 +183,7 @@ def calculate_matches_for_user(user) -> int:
         if candidate_profile is None:
             continue
 
-        score, breakdown = compute_compatibility(requester_profile, candidate_profile)
+        score, breakdown = compute_mutual_compatibility(requester_profile, candidate_profile)
         if score < MIN_SCORE_TO_STORE:
             continue
 
@@ -259,6 +284,13 @@ def _score_budget(profile1: Profile, profile2: Profile) -> Tuple[int, str]:
     overlap = _budget_overlap(range1, range2)
 
     if overlap <= 0:
+        # Soft landing: if ranges are close (within ~15% of higher budget), award partial credit.
+        gap = min(abs(range1[1] - range2[0]), abs(range2[1] - range1[0]))
+        buffer = max(range1[1], range2[1]) * Decimal("0.15")
+        if buffer > 0 and gap < buffer:
+            ratio = float((buffer - gap) / buffer)
+            partial = int(round(weight * (0.3 + 0.5 * ratio)))  # cap partial between 30-80%
+            return partial, "Budgets are close; flexibility could make this work."
         return 0, "Budget ranges currently do not overlap."
 
     combined_min = min(range1[0], range2[0])
