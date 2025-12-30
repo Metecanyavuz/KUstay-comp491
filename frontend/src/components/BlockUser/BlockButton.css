@@ -1,0 +1,31 @@
+.block-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #dc3545;
+  background-color: transparent;
+  color: #dc3545;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.block-btn:hover:not(:disabled) {
+  background-color: #dc3545;
+  color: white;
+}
+
+.block-btn.blocked {
+  border-color: #28a745;
+  color: #28a745;
+}
+
+.block-btn.blocked:hover:not(:disabled) {
+  background-color: #28a745;
+  color: white;
+}
+
+.block-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

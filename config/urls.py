@@ -69,7 +69,35 @@ urlpatterns = [
         name="conversation_detail",
     ),
     path("api/", include(router.urls)),
-
+    # Report system
+    path(
+        "report/<str:report_type>/<int:object_id>/",
+        views.report_create_view,
+        name="report_create",
+    ),
+    path("reports/", views.report_list_view, name="report_list"),
+    # Block user system
+    path("block-user/<int:user_id>/", views.block_user_view, name="block_user"),
+    path("unblock-user/<int:user_id>/", views.unblock_user_view, name="unblock_user"),
+    path("blocked-users/", views.blocked_users_view, name="blocked_users"),
+    # Block review system
+    path("block-reviews/", views.block_reviews_view, name="block_reviews"),
+    path(
+        "block-reviews/create/",
+        views.block_review_create_view,
+        name="block_review_create",
+    ),
+    path(
+        "block-reviews/<int:review_id>/edit/",
+        views.block_review_update_view,
+        name="block_review_update",
+    ),
+    path(
+        "block-reviews/<int:review_id>/delete/",
+        views.block_review_delete_view,
+        name="block_review_delete",
+    ),
+    path("my-block-reviews/", views.my_block_reviews_view, name="my_block_reviews"),
     ##new urls for frontend.
     path("api/", include(router.urls)),
     path('api/csrf/', api_views.get_csrf_token, name='csrf'),  # CSRF endpoint
@@ -92,6 +120,14 @@ urlpatterns = [
     path('api/auth/verify-email/', api_views.verify_email_view),
     path('api/auth/forgot-password/', api_views.forgot_password_view),
     path('api/auth/reset-password/', api_views.reset_password_view),
+    # Report API endpoints
+    path('api/reports/', api_views.user_reports, name='api_user_reports'),
+    path('api/reports/create/', api_views.create_report, name='api_create_report'),
+    # Block User API endpoints
+    path('api/block-user/<int:user_id>/', api_views.block_user, name='api_block_user'),
+    path('api/unblock-user/<int:user_id>/', api_views.unblock_user, name='api_unblock_user'),
+    path('api/blocked-users/', api_views.blocked_users_list, name='api_blocked_users'),
+    path('api/block-user/<int:user_id>/check/', api_views.check_user_blocked, name='api_check_blocked'),
 ]
 
 if settings.SERVE_MEDIA:

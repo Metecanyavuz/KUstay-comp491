@@ -1188,3 +1188,288 @@ def address_streets(request):
         streets = _dictfetchall(cursor)
 
     return Response(streets)
+
+
+# ============================================================================
+# REPORT API ENDPOINTS
+# ============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_report(request):
+    """
+    Create a report for a user, listing, or message
+    POST /api/reports/
+    Body: {
+        "report_type": "user|listing|message",
+        "reported_user_id": int,
+        "reported_listing_id": int (optional),
+        "reported_message_id": int (optional),
+        "description": str
+    }
+    """
+    from .models import Report, Listing, Message
+
+    report_type = request.data.get('report_type')
+    reported_user_id = request.data.get('reported_user_id')
+    reported_listing_id = request.data.get('reported_listing_id')
+    reported_message_id = request.data.get('reported_message_id')
+    description = request.data.get('description', '').strip()
+
+    # Validation
+    if not report_type or report_type not in ['user', 'listing', 'message', 'other']:
+        return Response(
+            {'error': 'Invalid report_type. Must be: user, listing, message, or other'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not description or len(description) < 10:
+        return Response(
+            {'error': 'Description must be at least 10 characters'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if len(description) > 1000:
+        return Response(
+            {'error': 'Description cannot exceed 1000 characters'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        reported_user = User.objects.get(pk=reported_user_id)
+
+        if reported_user == request.user:
+            return Response(
+                {'error': 'You cannot report yourself'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create report
+        report_data = {
+            'reporter': request.user,
+            'reported_user': reported_user,
+            'report_type': report_type,
+            'description': description,
+        }
+
+        # Add optional fields
+        if reported_listing_id:
+            try:
+                listing = Listing.objects.get(pk=reported_listing_id)
+                report_data['reported_listing'] = listing
+            except Listing.DoesNotExist:
+                return Response(
+                    {'error': 'Listing not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+        if reported_message_id:
+            try:
+                message = Message.objects.get(pk=reported_message_id)
+                # Ensure reporter is part of the conversation
+                if request.user not in (message.sender, message.receiver):
+                    return Response(
+                        {'error': 'You cannot report this message'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                report_data['reported_message'] = message
+            except Message.DoesNotExist:
+                return Response(
+                    {'error': 'Message not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+        report = Report.objects.create(**report_data)
+
+        return Response(
+            {
+                'message': 'Report submitted successfully',
+                'report_id': report.report_id,
+                'status': report.status
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'User not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error creating report: {str(e)}")
+        return Response(
+            {'error': 'Failed to create report'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_reports(request):
+    """
+    Get current user's submitted reports
+    GET /api/reports/
+    """
+    from .models import Report
+
+    reports = Report.objects.filter(
+        reporter=request.user
+    ).select_related(
+        'reported_user', 'reported_listing', 'reported_message'
+    ).order_by('-created_at')
+
+    data = []
+    for report in reports:
+        data.append({
+            'report_id': report.report_id,
+            'report_type': report.report_type,
+            'description': report.description,
+            'status': report.status,
+            'created_at': report.created_at,
+            'resolved_at': report.resolved_at,
+            'reported_user': {
+                'id': report.reported_user.user_id,
+                'username': report.reported_user.username,
+                'email': report.reported_user.email,
+            } if report.reported_user else None,
+            'reported_listing': {
+                'id': report.reported_listing.listing_id,
+                'title': report.reported_listing.title,
+            } if report.reported_listing else None,
+        })
+
+    return Response({'reports': data})
+
+
+# ============================================================================
+# BLOCK USER API ENDPOINTS
+# ============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def block_user(request, user_id):
+    """
+    Block a user
+    POST /api/block-user/<user_id>/
+    """
+    from .models import BlockedUser
+
+    try:
+        user_to_block = User.objects.get(pk=user_id)
+
+        if user_to_block == request.user:
+            return Response(
+                {'error': 'You cannot block yourself'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if already blocked
+        if BlockedUser.objects.filter(
+            blocker=request.user,
+            blocked=user_to_block
+        ).exists():
+            return Response(
+                {'message': 'User already blocked'},
+                status=status.HTTP_200_OK
+            )
+
+        # Create block
+        BlockedUser.objects.create(
+            blocker=request.user,
+            blocked=user_to_block
+        )
+
+        return Response(
+            {'message': f'Successfully blocked {user_to_block.username}'},
+            status=status.HTTP_201_CREATED
+        )
+
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'User not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def unblock_user(request, user_id):
+    """
+    Unblock a user
+    DELETE /api/block-user/<user_id>/
+    """
+    from .models import BlockedUser
+
+    try:
+        user_to_unblock = User.objects.get(pk=user_id)
+
+        blocked_entry = BlockedUser.objects.filter(
+            blocker=request.user,
+            blocked=user_to_unblock
+        ).first()
+
+        if not blocked_entry:
+            return Response(
+                {'error': 'User is not blocked'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        blocked_entry.delete()
+
+        return Response(
+            {'message': f'Successfully unblocked {user_to_unblock.username}'},
+            status=status.HTTP_200_OK
+        )
+
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'User not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def blocked_users_list(request):
+    """
+    Get list of blocked users
+    GET /api/blocked-users/
+    """
+    from .models import BlockedUser
+
+    blocked = BlockedUser.objects.filter(
+        blocker=request.user
+    ).select_related('blocked').order_by('-blocked_at')
+
+    data = []
+    for entry in blocked:
+        data.append({
+            'block_id': entry.block_id,
+            'blocked_at': entry.blocked_at,
+            'user': {
+                'id': entry.blocked.user_id,
+                'username': entry.blocked.username,
+                'email': entry.blocked.email,
+                'first_name': entry.blocked.first_name,
+                'last_name': entry.blocked.last_name,
+            }
+        })
+
+    return Response({'blocked_users': data})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_user_blocked(request, user_id):
+    """
+    Check if a user is blocked
+    GET /api/block-user/<user_id>/check/
+    """
+    from .models import BlockedUser
+
+    is_blocked = BlockedUser.objects.filter(
+        blocker=request.user,
+        blocked_id=user_id
+    ).exists()
+
+    return Response({'is_blocked': is_blocked})

@@ -12,9 +12,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .forms import ListingForm, MessageForm, ProfileForm
-from .forms import ListingForm, MessageForm, ProfileForm
-from .models import Conversation, Listing, MatchCompatibility, Message, Profile, Faculty
+from .forms import ListingForm, MessageForm, ProfileForm, ReportForm, BlockReviewForm
+from .models import (
+    Conversation,
+    Listing,
+    MatchCompatibility,
+    Message,
+    Profile,
+    Faculty,
+    Report,
+    BlockReview,
+    BlockedUser,
+)
 from .serializers import FacultySerializer
 from .utils.matching import calculate_matches_for_user
 
@@ -431,3 +440,221 @@ class TopMatchesAPIView(APIView):
             )
 
         return Response({"results": results, "count": len(results)})
+
+
+# ============================================================================
+# REPORT SYSTEM VIEWS
+# ============================================================================
+
+
+@login_required
+def report_create_view(request, report_type, object_id):
+    """
+    Create a report for a user, listing, or message.
+    report_type: 'user', 'listing', or 'message'
+    object_id: ID of the object being reported
+    """
+    UserModel = get_user_model()
+
+    reported_user = None
+    reported_listing = None
+    reported_message = None
+
+    if report_type == "user":
+        reported_user = get_object_or_404(UserModel, pk=object_id)
+        if reported_user == request.user:
+            messages.error(request, "You cannot report yourself.")
+            return redirect("home")
+    elif report_type == "listing":
+        reported_listing = get_object_or_404(Listing, pk=object_id)
+        reported_user = reported_listing.user
+    elif report_type == "message":
+        reported_message = get_object_or_404(Message, pk=object_id)
+        # Ensure the reporter is part of the conversation
+        if request.user not in (reported_message.sender, reported_message.receiver):
+            messages.error(request, "You cannot report this message.")
+            return redirect("conversations")
+        reported_user = reported_message.sender
+    else:
+        messages.error(request, "Invalid report type.")
+        return redirect("home")
+
+    if request.method == "POST":
+        form = ReportForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.reporter = request.user
+            report.reported_user = reported_user
+            report.reported_listing = reported_listing
+            report.reported_message = reported_message
+            report.save()
+            messages.success(
+                request,
+                "Report submitted successfully. Our team will review it shortly.",
+            )
+            return redirect("home")
+    else:
+        initial_data = {"report_type": report_type}
+        form = ReportForm(initial=initial_data)
+
+    context = {
+        "form": form,
+        "report_type": report_type,
+        "reported_object": reported_user or reported_listing or reported_message,
+    }
+    return render(request, "report_form.html", context)
+
+
+@login_required
+def report_list_view(request):
+    """View reports filed by the current user"""
+    reports = Report.objects.filter(reporter=request.user).order_by("-created_at")
+    return render(request, "report_list.html", {"reports": reports})
+
+
+# ============================================================================
+# BLOCK USER SYSTEM VIEWS
+# ============================================================================
+
+
+@login_required
+def block_user_view(request, user_id):
+    """Block a user"""
+    UserModel = get_user_model()
+    user_to_block = get_object_or_404(UserModel, pk=user_id)
+
+    if user_to_block == request.user:
+        messages.error(request, "You cannot block yourself.")
+        return redirect("home")
+
+    # Check if already blocked
+    if BlockedUser.objects.filter(
+        blocker=request.user, blocked=user_to_block
+    ).exists():
+        messages.info(request, "You have already blocked this user.")
+        return redirect("blocked_users")
+
+    BlockedUser.objects.create(blocker=request.user, blocked=user_to_block)
+    messages.success(request, f"You have blocked {user_to_block.username}.")
+    return redirect("blocked_users")
+
+
+@login_required
+def unblock_user_view(request, user_id):
+    """Unblock a user"""
+    UserModel = get_user_model()
+    user_to_unblock = get_object_or_404(UserModel, pk=user_id)
+
+    blocked_entry = get_object_or_404(
+        BlockedUser, blocker=request.user, blocked=user_to_unblock
+    )
+    blocked_entry.delete()
+    messages.success(request, f"You have unblocked {user_to_unblock.username}.")
+    return redirect("blocked_users")
+
+
+@login_required
+def blocked_users_view(request):
+    """View all users blocked by the current user"""
+    blocked_users = BlockedUser.objects.filter(blocker=request.user).select_related(
+        "blocked"
+    )
+    return render(request, "blocked_users.html", {"blocked_users": blocked_users})
+
+
+# ============================================================================
+# BLOCK REVIEW SYSTEM VIEWS
+# ============================================================================
+
+
+@login_required
+def block_review_create_view(request):
+    """Create a new block/site review"""
+    if request.method == "POST":
+        form = BlockReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.user = request.user
+            review.save()
+            messages.success(
+                request,
+                "Review submitted successfully! It will be visible after moderation.",
+            )
+            return redirect("block_reviews")
+    else:
+        form = BlockReviewForm()
+
+    return render(request, "block_review_form.html", {"form": form, "is_edit": False})
+
+
+@login_required
+def block_review_update_view(request, review_id):
+    """Update an existing block review"""
+    review = get_object_or_404(BlockReview, pk=review_id, user=request.user)
+
+    if request.method == "POST":
+        form = BlockReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            updated_review = form.save(commit=False)
+            # Reset moderation status when edited
+            updated_review.moderation_status = "pending"
+            updated_review.is_approved = False
+            updated_review.save()
+            messages.success(request, "Review updated and re-submitted for moderation.")
+            return redirect("block_reviews")
+    else:
+        form = BlockReviewForm(instance=review)
+
+    return render(
+        request,
+        "block_review_form.html",
+        {"form": form, "is_edit": True, "review": review},
+    )
+
+
+@login_required
+def block_review_delete_view(request, review_id):
+    """Delete a block review"""
+    review = get_object_or_404(BlockReview, pk=review_id, user=request.user)
+
+    if request.method == "POST":
+        review.delete()
+        messages.success(request, "Review deleted successfully.")
+        return redirect("block_reviews")
+
+    return render(request, "block_review_confirm_delete.html", {"review": review})
+
+
+def block_reviews_view(request):
+    """
+    View all approved block reviews.
+    Users can filter by neighborhood or block name.
+    """
+    reviews = BlockReview.objects.filter(is_approved=True).select_related("user")
+
+    # Filtering
+    neighborhood = request.GET.get("neighborhood", "").strip()
+    block_name = request.GET.get("block_name", "").strip()
+
+    if neighborhood:
+        reviews = reviews.filter(neighborhood__icontains=neighborhood)
+    if block_name:
+        reviews = reviews.filter(block_name__icontains=block_name)
+
+    reviews = reviews.order_by("-created_at")
+
+    return render(
+        request,
+        "block_reviews.html",
+        {
+            "reviews": reviews,
+            "filters": {"neighborhood": neighborhood, "block_name": block_name},
+        },
+    )
+
+
+@login_required
+def my_block_reviews_view(request):
+    """View current user's block reviews (all statuses)"""
+    reviews = BlockReview.objects.filter(user=request.user).order_by("-created_at")
+    return render(request, "my_block_reviews.html", {"reviews": reviews})
