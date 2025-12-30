@@ -77,6 +77,7 @@ urlpatterns = [
     path('api/block-reviews/', api_views.block_reviews_view, name='api_block_reviews'),
     path('api/block-reviews/highlights/', api_views.block_review_highlights, name='api_block_review_highlights'),
     path('api/block-reviews/buildings/', api_views.block_review_buildings, name='api_block_review_buildings'),
+    path('api/home/stats/', api_views.home_page_stats, name='api_home_stats'),
 
 
     path('api/auth/signup/', api_views.signup_view),
