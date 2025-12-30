@@ -16,8 +16,8 @@ if not ALLOWED_HOSTS or ALLOWED_HOSTS == ['']:
     ALLOWED_HOSTS = ['*']  # Fallback, but should be set in environment
 
 # CSRF & CORS
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+CSRF_TRUSTED_ORIGINS = read_list("CSRF_TRUSTED_ORIGINS", default_csrf_trusted_origins)
+CORS_ALLOWED_ORIGINS = read_list("CORS_ALLOWED_ORIGINS", default_cors_allowed_origins)
 
 # Database - should come from DATABASE_URL environment variable
 DATABASES = {
