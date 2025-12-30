@@ -1,0 +1,9 @@
+Open docker 
+
+source venv/bin/activate
+
+ ./scripts/sync_db.sh
+
+python manage.py runserver
+
+npm start
