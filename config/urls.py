@@ -55,6 +55,7 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
     path("matches/", views.matches_view, name="matches"),
     path("api/matches/top/", views.TopMatchesAPIView.as_view(), name="top-matches-api"),
+    path("api/faculties/", views.FacultyListView.as_view(), name="faculties"),
     path("conversations/", views.conversation_list_view, name="conversations"),
     path(
         "conversations/start/<int:user_id>/",

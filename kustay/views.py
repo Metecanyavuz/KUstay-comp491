@@ -13,7 +13,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .forms import ListingForm, MessageForm, ProfileForm
-from .models import Conversation, Listing, MatchCompatibility, Message, Profile
+from .forms import ListingForm, MessageForm, ProfileForm
+from .models import Conversation, Listing, MatchCompatibility, Message, Profile, Faculty
+from .serializers import FacultySerializer
 from .utils.matching import calculate_matches_for_user
 
 
@@ -359,6 +361,15 @@ def matches_view(request):
     )
 
 
+class FacultyListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        faculties = Faculty.objects.prefetch_related('departments').all()
+        serializer = FacultySerializer(faculties, many=True)
+        return Response(serializer.data)
+
+
 class TopMatchesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -410,8 +421,8 @@ class TopMatchesAPIView(APIView):
                         "username": partner.username,
                         "first_name": getattr(partner_profile, "first_name", partner.first_name),
                         "last_name": getattr(partner_profile, "last_name", partner.last_name),
-                        "department": getattr(partner_profile, "department", ""),
-                        "faculty": getattr(partner_profile, "faculty", ""),
+                        "department": [d.name for d in partner_profile.departments.all()] if partner_profile else [],
+                        "faculty": [d.faculty.name for d in partner_profile.departments.all()] if partner_profile else [],
                         "profile_photo_url": getattr(partner_profile, "profile_photo_url", ""),
                     },
                     "compatibility_score": float(match.compatibility_score),

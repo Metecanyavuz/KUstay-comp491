@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     User, Profile, Listing, ListingImage, Conversation, Message,
-    Review, BlockReview, Report, BlockedUser, MatchCompatibility, Notification
+    Review, BlockReview, Report, BlockedUser, MatchCompatibility, Notification,
+    Faculty, Department
 )
 
 
@@ -31,10 +32,24 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "first_name", "last_name", "department", "budget_min", "budget_max", "move_in_date")
-    search_fields = ("user__email", "user__username", "first_name", "last_name", "department")
+    list_display = ("user", "first_name", "last_name", "budget_min", "budget_max", "move_in_date")
+    search_fields = ("user__email", "user__username", "first_name", "last_name", "departments__name")
     list_filter = ("smoker", "pets", "sleep_schedule", "cleanliness_level", "room_type_preference")
+    filter_horizontal = ("departments",)
     readonly_fields = ("updated_at",)
+
+
+@admin.register(Faculty)
+class FacultyAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+
+
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ("name", "faculty")
+    list_filter = ("faculty",)
+    search_fields = ("name", "faculty__name")
 
 
 @admin.register(Listing)
