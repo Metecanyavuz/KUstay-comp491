@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  User, 
-  Mail, 
-  Phone, 
+import {
+  User,
+  Mail,
+  Phone,
   Calendar,
   DollarSign,
   Home,
@@ -16,9 +16,13 @@ import {
   Briefcase,
   GraduationCap,
   MapPin,
-  CheckCircle
+  CheckCircle,
+  Flag,
+  Ban
 } from 'lucide-react';
 import './UserProfile.css';
+import ReportModal from '../Report/ReportModal';
+import BlockButton from '../BlockUser/BlockButton';
 
 function UserProfile() {
   const { userId } = useParams();
@@ -28,6 +32,7 @@ function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [photoError, setPhotoError] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -182,10 +187,28 @@ function UserProfile() {
           </div>
 
           {currentUser && currentUser.id !== parseInt(userId) && (
-            <button className="message-button-header" onClick={startConversation}>
-              <MessageCircle size={20} />
-              Send Message
-            </button>
+            <div className="user-actions">
+              <button className="message-button-header" onClick={startConversation}>
+                <MessageCircle size={20} />
+                Send Message
+              </button>
+              <button
+                className="report-button-header"
+                onClick={() => setShowReportModal(true)}
+                title="Report User"
+              >
+                <Flag size={20} />
+              </button>
+              <BlockButton
+                userId={parseInt(userId)}
+                username={profile.first_name || 'User'}
+                onBlockChange={(isBlocked) => {
+                  if (isBlocked) {
+                    navigate('/matches');
+                  }
+                }}
+              />
+            </div>
           )}
         </div>
 
@@ -335,6 +358,14 @@ function UserProfile() {
             </div>
           )}
         </div>
+
+        {/* Report Modal */}
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportType="user"
+          reportedUserId={parseInt(userId)}
+        />
       </div>
     </div>
   );
