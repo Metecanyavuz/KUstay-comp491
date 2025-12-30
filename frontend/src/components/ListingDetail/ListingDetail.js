@@ -17,6 +17,7 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { useAuth } from '../../context/AuthContext';
 import { getCSRFToken } from '../../utils/csrf';
+import { resolveMediaUrl } from '../../utils/media';
 import './ListingDetail.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -215,17 +216,21 @@ function ListingDetail() {
     [listing?.house_rules],
   );
 
-  const primaryImage =
-    listing?.image ||
-    listing?.images?.find((img) => img.is_primary)?.image_url ||
-    listing?.images?.[0]?.image_url ||
-    null;
+  const primaryImage = useMemo(() => {
+    const candidate =
+      listing?.image ||
+      listing?.images?.find((img) => img.is_primary)?.image_url ||
+      listing?.images?.[0]?.image_url ||
+      null;
+    return resolveMediaUrl(candidate);
+  }, [listing?.image, listing?.images]);
   const galleryImages = useMemo(() => {
     if (!listing?.images?.length) {
       return [];
     }
     const uniqueUrls = listing.images
       .map((img) => img.image_url)
+      .map((url) => resolveMediaUrl(url))
       .filter(Boolean)
       .filter((url) => url !== primaryImage);
     return uniqueUrls.slice(0, 6);
