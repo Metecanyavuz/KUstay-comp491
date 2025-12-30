@@ -341,10 +341,15 @@ function Profile() {
           </div>
 
           {!isEditing && profile && (
-            <button className="edit-button" onClick={() => setIsEditing(true)}>
-              <Edit size={20} />
-              Edit Profile
-            </button>
+            <div className="header-actions">
+              <a className="secondary-button manage-blocks-button" href="/blocked-users">
+                Manage blocked users
+              </a>
+              <button className="edit-button" onClick={() => setIsEditing(true)}>
+                <Edit size={20} />
+                Edit Profile
+              </button>
+            </div>
           )}
         </div>
 

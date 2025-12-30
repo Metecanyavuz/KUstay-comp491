@@ -44,7 +44,6 @@ function Navigation() {
                 <MessageCircle size={18} />
                 <span>Messages</span>
               </a>
-              <a href="/blocked-users" className="nav-link">Blocked Users</a>
             </>
           )}
         </div>
@@ -93,7 +92,6 @@ function Navigation() {
               <a href="/matches" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Matches</a>
               <a href="/reviews" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Reviews</a>
               <a href="/conversations" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Messages</a>
-              <a href="/blocked-users" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Blocked Users</a>
               <a href="/profile" className="mobile-nav-link" onClick={() => setIsOpen(false)}>Profile</a>
               <button onClick={handleLogout} className="mobile-nav-link logout-btn">
                 <LogOut size={18} />

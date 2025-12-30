@@ -23,6 +23,9 @@ const BlockButton = ({ userId, username, onBlockChange }) => {
   };
 
   const handleBlock = async () => {
+    if (!window.confirm(`Block ${username}? They will no longer be able to contact you.`)) {
+      return;
+    }
     setLoading(true);
     try {
       await apiClient.post(`/api/block-user/${userId}/`);

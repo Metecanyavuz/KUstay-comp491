@@ -34,16 +34,22 @@
   }
   
   /* Profile Header */
-  .profile-header {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
+.profile-header {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
   
   .header-content {
     display: flex;
@@ -111,24 +117,49 @@
     border: 1px dashed var(--ku-border);
   }
   
-  .edit-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, var(--ku-red) 0%, var(--ku-red-dark) 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+.edit-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, var(--ku-red) 0%, var(--ku-red-dark) 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
   
   .edit-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(195, 17, 46, 0.35);
   }
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--ku-border);
+  background: #fff;
+  color: var(--ku-black);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.secondary-button:hover {
+  border-color: var(--ku-red);
+  color: var(--ku-red-dark);
+  box-shadow: 0 6px 12px rgba(195, 17, 46, 0.15);
+}
+
+.manage-blocks-button {
+  white-space: nowrap;
+}
   
   /* Alerts */
   .error-alert,
