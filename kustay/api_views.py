@@ -80,10 +80,22 @@ class ListingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         listing = serializer.save(user=self.request.user)
         self._save_listing_images(listing)
+        if listing.image:
+            logger.info(
+                "Cover image saved: %s exists=%s",
+                listing.image.name,
+                default_storage.exists(listing.image.name),
+            )
 
     def perform_update(self, serializer):
         listing = serializer.save()
         self._save_listing_images(listing)
+        if listing.image:
+            logger.info(
+                "Cover image saved: %s exists=%s",
+                listing.image.name,
+                default_storage.exists(listing.image.name),
+            )
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -147,6 +159,11 @@ class ListingViewSet(viewsets.ModelViewSet):
             ext = os.path.splitext(image_file.name)[1] or ".jpg"
             filename = f"listing_images/{listing.pk}_{uuid.uuid4().hex}{ext}"
             saved_path = default_storage.save(filename, image_file)
+            logger.info(
+                "Additional image saved: %s exists=%s",
+                saved_path,
+                default_storage.exists(saved_path),
+            )
             image_url = self.request.build_absolute_uri(default_storage.url(saved_path))
             is_primary = False
             if not listing.image and not has_primary and index == 0:
