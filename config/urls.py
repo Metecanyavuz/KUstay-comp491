@@ -91,5 +91,5 @@ urlpatterns = [
     path('api/auth/reset-password/', api_views.reset_password_view),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG or settings.SERVE_MEDIA:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

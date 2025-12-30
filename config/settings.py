@@ -164,8 +164,9 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+SERVE_MEDIA = os.getenv("SERVE_MEDIA", "False").lower() in ("true", "1", "yes")
 
 # WhiteNoise configuration for static files
 STORAGES = {
