@@ -22,6 +22,7 @@ import './Profile.css';
 
 import { getCSRFToken } from '../../utils/csrf';
 import LocationSelector from '../Shared/LocationSelector';
+import DepartmentSelector from '../Shared/DepartmentSelector';
 
 
 function Profile() {
@@ -40,8 +41,8 @@ function Profile() {
     first_name: '',
     last_name: '',
     phone_number: '',
-    department: '',
-    faculty: '',
+    departments: [],
+    department_ids: [],
     budget_min: '',
     budget_max: '',
     preferred_neighborhoods: [],
@@ -109,8 +110,8 @@ function Profile() {
     first_name: data.first_name || '',
     last_name: data.last_name || '',
     phone_number: data.phone_number || '',
-    department: data.department || '',
-    faculty: data.faculty || '',
+    departments: data.departments || [],
+    department_ids: (data.departments || []).map(d => d.id),
     budget_min: data.budget_min || '',
     budget_max: data.budget_max || '',
     preferred_neighborhoods: Array.isArray(data.preferred_neighborhoods)
@@ -177,6 +178,14 @@ function Profile() {
     }));
   };
 
+  const handleDepartmentsChange = (newDepartments) => {
+    setFormData(prev => ({
+      ...prev,
+      departments: newDepartments,
+      department_ids: newDepartments.map(d => d.id)
+    }));
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) {
@@ -214,8 +223,9 @@ function Profile() {
       dataToSend.append('first_name', formData.first_name);
       dataToSend.append('last_name', formData.last_name);
       dataToSend.append('phone_number', formData.phone_number);
-      dataToSend.append('department', formData.department);
-      dataToSend.append('faculty', formData.faculty);
+      formData.department_ids.forEach(id => {
+        dataToSend.append('department_ids', id);
+      });
       dataToSend.append('budget_min', formData.budget_min || 0);
       dataToSend.append('budget_max', formData.budget_max || 0);
       dataToSend.append('preferred_neighborhoods', JSON.stringify(formData.preferred_neighborhoods));
@@ -444,27 +454,11 @@ function Profile() {
 
               {user.user_type === 'KU_Student' && (
                 <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="department">Department</label>
-                    <input
-                      type="text"
-                      id="department"
-                      name="department"
-                      value={formData.department}
-                      onChange={handleChange}
-                      placeholder="Computer Engineering"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="faculty">Faculty</label>
-                    <input
-                      type="text"
-                      id="faculty"
-                      name="faculty"
-                      value={formData.faculty}
-                      onChange={handleChange}
-                      placeholder="Engineering"
+                  <div className="form-group full-width">
+                    <label>Departments </label>
+                    <DepartmentSelector
+                      selectedDepartments={formData.departments}
+                      onChange={handleDepartmentsChange}
                     />
                   </div>
                 </div>
@@ -666,16 +660,17 @@ function Profile() {
                 )}
                 {user.user_type === 'KU_Student' && (
                   <>
-                    {formData.department && (
-                      <div className="info-item">
-                        <label>Department</label>
-                        <p>{formData.department}</p>
-                      </div>
-                    )}
-                    {formData.faculty && (
-                      <div className="info-item">
-                        <label>Faculty</label>
-                        <p>{formData.faculty}</p>
+                    {formData.departments && formData.departments.length > 0 && (
+                      <div className="info-item full-width">
+                        <label>Departments</label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {formData.departments.map(dept => (
+                            <span key={dept.id} className="department-tag">
+                              <GraduationCap size={12} />
+                              {dept.name}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </>
@@ -694,12 +689,24 @@ function Profile() {
                   <label>Budget Range</label>
                   <p>₺{formData.budget_min} - ₺{formData.budget_max} / month</p>
                 </div>
-                {formData.preferred_neighborhoods && (
-                  <div className="info-item">
+                {formData.preferred_neighborhoods && formData.preferred_neighborhoods.length > 0 && (
+                  <div className="info-item full-width">
                     <label>Preferred Neighborhoods</label>
-                    <p>{Array.isArray(formData.preferred_neighborhoods)
-                      ? formData.preferred_neighborhoods.join(', ')
-                      : formData.preferred_neighborhoods}</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {Array.isArray(formData.preferred_neighborhoods) ? (
+                        formData.preferred_neighborhoods.map((n, i) => (
+                          <span key={i} className="location-tag">
+                            <MapPin size={12} />
+                            {n}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="location-tag">
+                          <MapPin size={12} />
+                          {formData.preferred_neighborhoods}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
                 <div className="info-item">
@@ -751,7 +758,7 @@ function Profile() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
 

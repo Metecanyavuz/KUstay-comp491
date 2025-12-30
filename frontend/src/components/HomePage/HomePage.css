@@ -23,9 +23,9 @@
   text-align: center;
 }
 
-.hero-content > * {
+.hero-content>* {
   width: 100%;
-  max-width: 820px;
+  /* Removed max-width 820px to allow flex centering to control natural width, or apply per element */
 }
 
 .hero-title {
@@ -33,15 +33,18 @@
   font-weight: 700;
   margin: 0;
   line-height: 1.2;
+  text-align: center;
 }
 
 .hero-subtitle {
   font-size: 1.25rem;
-  margin: 0;
+  margin: 0 auto;
   opacity: 0.95;
   max-width: 720px;
+  text-align: center;
 }
 
+/* Search Form */
 /* Search Form */
 .search-form {
   display: flex;
@@ -49,7 +52,8 @@
   max-width: 820px;
   width: 100%;
   margin: 0 auto;
-  align-items: center;
+  align-items: stretch;
+  /* Ensure equal height */
   justify-content: center;
   flex-wrap: nowrap;
 }
@@ -70,12 +74,16 @@
 
 .search-input {
   width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
+  padding: 0 1rem 0 3rem;
+  /* Adjusted padding for centering text vertically */
   border: none;
   border-radius: 12px;
   font-size: 1rem;
   box-shadow: 0 4px 15px var(--ku-shadow);
-  min-height: 54px;
+  height: 56px;
+  /* Explicit equal height */
+  box-sizing: border-box;
+  /* Ensure padding doesn't affect width/height */
 }
 
 .search-button {
@@ -90,8 +98,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 54px;
+  height: 56px;
+  /* Explicit equal height */
   min-width: 110px;
+  box-sizing: border-box;
 }
 
 .search-button:hover {

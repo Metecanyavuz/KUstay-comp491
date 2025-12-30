@@ -1,0 +1,3 @@
+
+Open docker 
+Then just run ./scripts/sync_db.sh

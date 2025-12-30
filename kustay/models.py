@@ -24,6 +24,22 @@ class User(AbstractUser):
         return self.email
 
 
+class Faculty(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Department(models.Model):
+    name = models.CharField(max_length=100)
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name="departments")
+
+    class Meta:
+        unique_together = ('name', 'faculty')
+
+    def __str__(self):
+        return f"{self.name} ({self.faculty.name})"
+
 class Profile(models.Model): #user profile model
     CLEANLINESS_CHOICES = [ #cleanliness level choices
         ("low", "Low"),
@@ -71,8 +87,7 @@ class Profile(models.Model): #user profile model
     )
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    department = models.CharField(max_length=100, blank=True)
-    faculty = models.CharField(max_length=100, blank=True)
+    departments = models.ManyToManyField(Department, blank=True, related_name="students")
     phone_number = models.CharField(max_length=20, blank=True)
     budget_min = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     budget_max = models.DecimalField(max_digits=10, decimal_places=2, default=0)

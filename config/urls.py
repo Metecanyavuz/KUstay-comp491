@@ -55,6 +55,7 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
     path("matches/", views.matches_view, name="matches"),
     path("api/matches/top/", views.TopMatchesAPIView.as_view(), name="top-matches-api"),
+    path("api/faculties/", views.FacultyListView.as_view(), name="faculties"),
     path("conversations/", views.conversation_list_view, name="conversations"),
     path(
         "conversations/start/<int:user_id>/",
@@ -76,6 +77,7 @@ urlpatterns = [
     path('api/block-reviews/', api_views.block_reviews_view, name='api_block_reviews'),
     path('api/block-reviews/highlights/', api_views.block_review_highlights, name='api_block_review_highlights'),
     path('api/block-reviews/buildings/', api_views.block_review_buildings, name='api_block_review_buildings'),
+    path('api/home/stats/', api_views.home_page_stats, name='api_home_stats'),
     path('api/addresses/provinces/', api_views.address_provinces, name='api_address_provinces'),
     path('api/addresses/districts/', api_views.address_districts, name='api_address_districts'),
     path('api/addresses/neighborhoods/', api_views.address_neighborhoods, name='api_address_neighborhoods'),

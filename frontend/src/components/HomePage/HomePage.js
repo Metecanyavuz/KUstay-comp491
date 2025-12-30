@@ -7,7 +7,14 @@ function HomePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [stats, setStats] = useState({
+    active_listings: '500+',
+    students: '1000+',
+    match_rate: '95%'
+  });
+
   useEffect(() => {
+    // Fetch listings
     fetch('/api/listings/?limit=6', { credentials: 'include' })
       .then((response) => response.json())
       .then((data) => {
@@ -18,6 +25,17 @@ function HomePage() {
         console.error(err);
         setLoading(false);
       });
+
+    // Fetch stats
+    fetch('/api/home/stats/')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          setStats(data);
+        }
+      })
+      .catch(err => console.error("Failed to load stats:", err));
+
   }, []);
 
   const handleSearch = (e) => {
@@ -36,7 +54,7 @@ function HomePage() {
           <p className="hero-subtitle">
             Connect with compatible roommates and discover your ideal living space near campus
           </p>
-          
+
           <form className="search-form" onSubmit={handleSearch}>
             <div className="search-input-wrapper">
               <Search className="search-icon" size={20} />
@@ -55,15 +73,15 @@ function HomePage() {
 
           <div className="hero-stats">
             <div className="stat">
-              <div className="stat-number">500+</div>
+              <div className="stat-number">{stats.active_listings}</div>
               <div className="stat-label">Active Listings</div>
             </div>
             <div className="stat">
-              <div className="stat-number">1000+</div>
+              <div className="stat-number">{stats.students}</div>
               <div className="stat-label">Students</div>
             </div>
             <div className="stat">
-              <div className="stat-number">95%</div>
+              <div className="stat-number">{stats.match_rate}</div>
               <div className="stat-label">Match Rate</div>
             </div>
           </div>

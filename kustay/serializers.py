@@ -1,6 +1,23 @@
 from rest_framework import serializers
 
-from .models import BlockReview, Conversation, Listing, ListingImage, Message, Profile, Review
+from .models import BlockReview, Conversation, Listing, ListingImage, Message, Profile, Review, Faculty, Department
+
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    faculty_name = serializers.CharField(source='faculty.name', read_only=True)
+
+    class Meta:
+        model = Department
+        fields = ['id', 'name', 'faculty', 'faculty_name']
+
+
+class FacultySerializer(serializers.ModelSerializer):
+    departments = DepartmentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Faculty
+        fields = ['id', 'name', 'departments']
+
 
 
 class ListingImageSerializer(serializers.ModelSerializer):
@@ -150,6 +167,11 @@ class BlockReviewSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    departments = DepartmentSerializer(many=True, read_only=True)
+    department_ids = serializers.PrimaryKeyRelatedField(
+        many=True, write_only=True, queryset=Department.objects.all(), source='departments'
+    )
+
     class Meta:
         model = Profile
         fields = [
@@ -157,8 +179,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'phone_number',
-            'department',
-            'faculty',
+            'departments',
+            'department_ids',
             'budget_min',
             'budget_max',
             'preferred_neighborhoods',
@@ -174,25 +196,38 @@ class ProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['profile_id', 'updated_at']
 
-        read_only_fields = ['profile_id', 'updated_at']
-
     def to_internal_value(self, data):
         # Handle multipart/form-data where JSON fields are strings
+        
+        # If data is a QueryDict (from multipart request), converting to dict()
+        # destroys lists (takes only the last value).
+        # We need to preserve 'department_ids' as a list.
+        is_querydict = hasattr(data, 'getlist')
+        
         # Convert to plain dict to avoid QueryDict treating list values as multiple parameters
         if hasattr(data, 'dict'):
-            data = data.dict()
+             internal_data = data.dict()
         elif hasattr(data, 'copy'):
-            data = data.copy()
+             internal_data = data.copy()
+        else:
+             internal_data = {}
 
-        if 'preferred_neighborhoods' in data and isinstance(data['preferred_neighborhoods'], str):
+        # Restore list fields if it was a QueryDict
+        if is_querydict:
+            if 'department_ids' in data:
+                internal_data['department_ids'] = data.getlist('department_ids')
+            elif 'department_ids[]' in data: # Handle potential array notation
+                internal_data['department_ids'] = data.getlist('department_ids[]')
+
+        if 'preferred_neighborhoods' in internal_data and isinstance(internal_data['preferred_neighborhoods'], str):
             try:
                 import json
-                data['preferred_neighborhoods'] = json.loads(data['preferred_neighborhoods'])
+                internal_data['preferred_neighborhoods'] = json.loads(internal_data['preferred_neighborhoods'])
             except (ValueError, TypeError):
                 # If parsing fails, let standard validation handle the error
                 pass
                 
-        return super().to_internal_value(data)
+        return super().to_internal_value(internal_data)
 
 
 

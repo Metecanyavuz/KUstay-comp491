@@ -984,6 +984,33 @@ def block_review_buildings(request):
 
     return Response(list(buildings))
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def home_page_stats(request):
+    """
+    Returns statistics for the home page:
+    - Active Listings
+    - Registered Students
+    - Match Rate
+    """
+    from .models import MatchCompatibility
+    
+    active_listings_count = Listing.objects.filter(is_active=True).count()
+    students_count = User.objects.count()
+    
+    avg_match_rate = MatchCompatibility.objects.aggregate(avg=Avg('compatibility_score'))['avg']
+    
+    if avg_match_rate:
+        match_rate_val = round(avg_match_rate)
+        match_rate_str = f"{match_rate_val}%"
+    else:
+        match_rate_str = "95%"
+
+    return Response({
+        "active_listings": f"{active_listings_count}+",
+        "students": f"{students_count}+",
+        "match_rate": match_rate_str
+    })
 
 def _dictfetchall(cursor):
     columns = [col[0] for col in cursor.description]
