@@ -27,7 +27,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import BlockReview, Conversation, Listing, ListingImage, Message, Profile, Review, User
+from .models import BlockReview, BlockedUser, Conversation, Listing, ListingImage, Message, Profile, Review, User
 from .serializers import (
     ConversationDetailSerializer,
     ConversationSerializer,
@@ -303,6 +303,13 @@ class ConversationViewSet(
         if partner.pk == request.user.pk:
             return Response({"error": "Cannot start a conversation with yourself"}, status=400)
 
+        # Disallow conversations when either party has blocked the other.
+        is_blocked = BlockedUser.objects.filter(
+            Q(blocker=request.user, blocked=partner) | Q(blocker=partner, blocked=request.user)
+        ).exists()
+        if is_blocked:
+            return Response({"error": "You cannot message this user."}, status=403)
+
         user1, user2 = sorted([request.user, partner], key=lambda u: u.pk)
         conversation, created = Conversation.objects.get_or_create(user1=user1, user2=user2)
         serializer = self.get_serializer(conversation, context={"request": request})
@@ -320,6 +327,12 @@ class ConversationViewSet(
 
         message_text = (request.data.get("message_text") or "").strip()
         attachment_file = request.FILES.get("attachment")
+
+        # Block users from messaging if a block exists in either direction.
+        if BlockedUser.objects.filter(
+            Q(blocker=request.user, blocked=partner) | Q(blocker=partner, blocked=request.user)
+        ).exists():
+            return Response({"error": "Messaging is disabled because one of you has blocked the other."}, status=403)
 
         if not message_text and not attachment_file:
             return Response(
