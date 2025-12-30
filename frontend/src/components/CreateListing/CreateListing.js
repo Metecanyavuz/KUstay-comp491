@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Home, MapPin, PlusCircle } from 'lucide-react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { getCSRFToken } from '../../utils/csrf';
+import { AMENITY_OPTIONS } from '../../data/amenities';
 import './CreateListing.css';
 
 const round6 = (value) => Number.parseFloat(value).toFixed(6);
@@ -16,12 +17,14 @@ const defaultForm = {
   city: '',
   district: '',
   address: '',
+  address_detail: '',
   neighborhood: '',
   rent_amount: '',
   available_from: '',
   total_rooms: 1,
   available_rooms: 1,
-  amenities: '',
+  amenities: [],
+  amenity_other: '',
   house_rules: '',
 };
 
@@ -37,15 +40,23 @@ const ROOM_TYPE_OPTIONS = [
   { value: 'entire_place', label: 'Entire Place' },
 ];
 
+const OTHER_AMENITY_LABEL = 'Other';
+
 function CreateListing() {
   const navigate = useNavigate();
   const [form, setForm] = useState(defaultForm);
   const [imageFile, setImageFile] = useState(null);
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const galleryInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [provinceData, setProvinceData] = useState([]);
   const [districtOptions, setDistrictOptions] = useState([]);
   const [neighborhoodOptions, setNeighborhoodOptions] = useState([]);
+  const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState('');
+  const [streetOptions, setStreetOptions] = useState([]);
+  const [streetLoading, setStreetLoading] = useState(false);
+  const [streetError, setStreetError] = useState('');
   const [locationError, setLocationError] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
   const [neighborhoodLoading, setNeighborhoodLoading] = useState(false);
@@ -73,11 +84,20 @@ function CreateListing() {
     setForm((prev) => ({
       ...prev,
       neighborhood: value,
+      address: '',
+      address_detail: '',
     }));
     setUserMovedPin(false);
     const hoodObj =
       neighborhoodOptions.find((h) => h.name === value) ||
       neighborhoodOptions.find((h) => h.neighborhood === value);
+    const hoodId = hoodObj?.id || hoodObj?._id || '';
+    setSelectedNeighborhoodId(hoodId);
+    setStreetOptions([]);
+    setStreetError('');
+    if (hoodId) {
+      fetchStreets(hoodId);
+    }
     const coords = getCoords(hoodObj);
     if (coords) {
       setMapCenter([coords.lat, coords.lng]);
@@ -91,14 +111,15 @@ function CreateListing() {
       setLocationLoading(true);
       setLocationError('');
       try {
-        const response = await fetch('https://api.turkiyeapi.dev/v1/provinces', {
+        const response = await fetch('/api/addresses/provinces/', {
           signal: controller.signal,
+          credentials: 'include',
         });
         if (!response.ok) {
           throw new Error('Unable to load provinces right now.');
         }
         const data = await response.json();
-        const items = data?.data || [];
+        const items = Array.isArray(data) ? data : data?.data || [];
         setProvinceData(items);
       } catch (err) {
         if (err.name !== 'AbortError') {
@@ -121,9 +142,14 @@ function CreateListing() {
       city: value,
       district: '',
       neighborhood: '',
+      address: '',
+      address_detail: '',
     }));
     setDistrictOptions(districts);
     setNeighborhoodOptions([]);
+    setSelectedNeighborhoodId('');
+    setStreetOptions([]);
+    setStreetError('');
     setMarkerPosition(null);
     setUserMovedPin(false);
     const coords = getCoords(selected);
@@ -138,8 +164,13 @@ function CreateListing() {
       ...prev,
       district: value,
       neighborhood: '',
+      address: '',
+      address_detail: '',
     }));
     setNeighborhoodOptions([]);
+    setSelectedNeighborhoodId('');
+    setStreetOptions([]);
+    setStreetError('');
     if (value) {
       const districtObj =
         districtOptions.find((d) => d.name === value) ||
@@ -158,12 +189,15 @@ function CreateListing() {
   // Re-center map based on selected city/district/neighborhood (best-effort).
   useEffect(() => {
     const controller = new AbortController();
-    const { city, district, neighborhood } = form;
+    const { city, district, neighborhood, address, address_detail } = form;
     if (!city) return undefined;
 
     async function geocodeArea() {
       try {
         const attempts = [];
+        const street = address?.trim();
+        const detail = address_detail?.trim();
+        if (street) attempts.push([street, detail, neighborhood, district, city]);
         if (neighborhood) attempts.push([neighborhood, district, city]);
         if (district) attempts.push([district, city]);
         if (city) attempts.push([city]);
@@ -208,7 +242,14 @@ function CreateListing() {
 
     geocodeArea();
     return () => controller.abort();
-  }, [form.city, form.district, form.neighborhood, userMovedPin]);
+  }, [
+    form.city,
+    form.district,
+    form.neighborhood,
+    form.address,
+    form.address_detail,
+    userMovedPin,
+  ]);
 
   const getCoords = (obj) => {
     if (!obj) return null;
@@ -237,20 +278,21 @@ function CreateListing() {
     try {
       const params = new URLSearchParams();
       if (districtId) {
-        params.set('districtId', districtId);
-      } else {
+        params.set('district_id', districtId);
+      } else if (districtName) {
         params.set('district', districtName);
       }
       params.set('limit', '500');
 
       const response = await fetch(
-        `https://api.turkiyeapi.dev/v1/neighborhoods?${params.toString()}`,
+        `/api/addresses/neighborhoods/?${params.toString()}`,
+        { credentials: 'include' },
       );
       if (!response.ok) {
         throw new Error('Mahalleler alınamadı');
       }
       const data = await response.json();
-      const items = data?.data || [];
+      const items = Array.isArray(data) ? data : data?.data || [];
       setNeighborhoodOptions(items);
     } catch (err) {
       console.error(err);
@@ -261,9 +303,92 @@ function CreateListing() {
     }
   };
 
+  const fetchStreets = async (neighborhoodId, query) => {
+    if (!neighborhoodId) {
+      setStreetOptions([]);
+      return;
+    }
+    setStreetLoading(true);
+    setStreetError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('neighborhood_id', neighborhoodId);
+      params.set('limit', '5000');
+      if (query) {
+        params.set('q', query);
+      }
+      const response = await fetch(`/api/addresses/streets/?${params.toString()}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Sokaklar alınamadı');
+      }
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : data?.data || [];
+      setStreetOptions(items);
+    } catch (err) {
+      console.error(err);
+      setStreetError('Sokak listesi yüklenemedi.');
+      setStreetOptions([]);
+    } finally {
+      setStreetLoading(false);
+    }
+  };
+
+  const handleStreetChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      address: value,
+    }));
+    setUserMovedPin(false);
+  };
+
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     setImageFile(file || null);
+  };
+
+  const handleGalleryChange = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    setGalleryFiles((prev) => {
+      const seen = new Set(prev.map((file) => `${file.name}-${file.size}-${file.lastModified}`));
+      const next = [...prev];
+      files.forEach((file) => {
+        const key = `${file.name}-${file.size}-${file.lastModified}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          next.push(file);
+        }
+      });
+      return next;
+    });
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
+    }
+  };
+
+  const handleGalleryRemove = (index) => {
+    setGalleryFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleGalleryClear = () => {
+    setGalleryFiles([]);
+  };
+
+  const handleAmenityToggle = (amenity) => {
+    setForm((prev) => {
+      const currentAmenities = Array.isArray(prev.amenities) ? prev.amenities : [];
+      const hasAmenity = currentAmenities.includes(amenity);
+      const nextAmenities = hasAmenity
+        ? currentAmenities.filter((item) => item !== amenity)
+        : [...currentAmenities, amenity];
+      return {
+        ...prev,
+        amenities: nextAmenities,
+        amenity_other: amenity === OTHER_AMENITY_LABEL && hasAmenity ? '' : prev.amenity_other,
+      };
+    });
   };
 
   const handleSubmit = async (event) => {
@@ -280,27 +405,50 @@ function CreateListing() {
       return;
     }
 
-    const amenities = form.amenities
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const selectedAmenities = Array.isArray(form.amenities)
+      ? form.amenities
+      : form.amenities
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean);
+    const hasOtherAmenity = selectedAmenities.includes(OTHER_AMENITY_LABEL);
+    const otherAmenity = form.amenity_other.trim();
+    const combinedAmenities = selectedAmenities.filter(
+      (item) => item !== OTHER_AMENITY_LABEL,
+    );
+    if (hasOtherAmenity && otherAmenity) {
+      const extraAmenities = otherAmenity
+        .split(/,|\n/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      combinedAmenities.push(...extraAmenities);
+    }
+    const amenities = combinedAmenities.reduce((acc, item) => {
+      const key = item.toLowerCase();
+      if (!acc.seen.has(key)) {
+        acc.seen.add(key);
+        acc.list.push(item);
+      }
+      return acc;
+    }, { list: [], seen: new Set() }).list;
 
     const city = form.city.trim();
     const district = form.district.trim();
     const neighborhood = form.neighborhood.trim();
     const street = form.address.trim();
+    const addressDetail = form.address_detail.trim();
 
     if (!city || !district) {
       setError('Please enter your city and district.');
       return;
     }
 
-    const composedAddress = [street, district, city].filter(Boolean).join(', ');
+    const composedAddress = [street, addressDetail, district, city].filter(Boolean).join(', ');
 
     setGeocodeWarning('');
 
     const coords = await geocodeAddress({
-      street,
+      street: [street, addressDetail].filter(Boolean).join(' '),
       neighborhood,
       district,
       city,
@@ -334,6 +482,9 @@ function CreateListing() {
 
     if (imageFile) {
       payload.append('image', imageFile);
+    }
+    if (galleryFiles.length) {
+      galleryFiles.forEach((file) => payload.append('images', file));
     }
 
     setSubmitting(true);
@@ -534,6 +685,48 @@ function CreateListing() {
                   onChange={handleFileChange}
                 />
               </label>
+              <label className="form-field">
+                <span>Additional photos (optional)</span>
+                <input
+                  name="images"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={galleryInputRef}
+                  onChange={handleGalleryChange}
+                />
+                <small className="form-hint">
+                  Select multiple images or add more after the first pick.
+                </small>
+                {galleryFiles.length > 0 && (
+                  <div className="file-list">
+                    <div className="file-list-header">
+                      <span>{galleryFiles.length} selected</span>
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={handleGalleryClear}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="file-chips">
+                      {galleryFiles.map((file, index) => (
+                        <span key={`${file.name}-${file.size}-${file.lastModified}`} className="file-chip">
+                          {file.name}
+                          <button
+                            type="button"
+                            onClick={() => handleGalleryRemove(index)}
+                            aria-label={`Remove ${file.name}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </label>
             </div>
           </section>
 
@@ -610,14 +803,38 @@ function CreateListing() {
               </label>
 
               <label className="form-field">
-                <span>Address *</span>
-                <input
+                <span>Sokak *</span>
+                <select
                   name="address"
-                  type="text"
-                  placeholder="Street, cadde, site, vb."
                   value={form.address}
-                  onChange={handleChange}
+                  onChange={(event) => handleStreetChange(event.target.value)}
+                  disabled={!selectedNeighborhoodId || streetLoading}
                   required
+                >
+                  <option value="">Sokak seçin</option>
+                  {streetOptions.map((street) => (
+                    <option
+                      key={street.id || street.sokak_id || street.name || street.sokak_adi}
+                      value={street.name || street.sokak_adi || street}
+                    >
+                      {street.name || street.sokak_adi || street}
+                    </option>
+                  ))}
+                </select>
+                {streetLoading && <small className="form-hint">Sokaklar yükleniyor…</small>}
+                {streetError && <small className="form-error inline">{streetError}</small>}
+              </label>
+            </div>
+
+            <div className="form-grid two">
+              <label className="form-field">
+                <span>Adres detayı (opsiyonel)</span>
+                <input
+                  name="address_detail"
+                  type="text"
+                  placeholder="Site adı, apartman no vb."
+                  value={form.address_detail}
+                  onChange={handleChange}
                 />
               </label>
             </div>
@@ -676,16 +893,37 @@ function CreateListing() {
                   onChange={handleChange}
                 />
               </label>
-              <label className="form-field">
-                <span>Amenities (comma separated)</span>
-                <input
-                  name="amenities"
-                  type="text"
-                  placeholder="Wi-Fi, Parking, AC"
-                  value={form.amenities}
-                  onChange={handleChange}
-                />
-              </label>
+              <div className="form-field amenity-field">
+                <span>Amenities</span>
+                <div className="amenities-grid">
+                  {[...AMENITY_OPTIONS, OTHER_AMENITY_LABEL].map((amenity) => (
+                    <button
+                      key={amenity}
+                      type="button"
+                      className={`amenity-chip ${
+                        form.amenities.includes(amenity) ? 'active' : ''
+                      }`}
+                      onClick={() => handleAmenityToggle(amenity)}
+                    >
+                      {amenity}
+                    </button>
+                  ))}
+                </div>
+                <small className="form-hint">Select all that apply.</small>
+              </div>
+              {form.amenities.includes(OTHER_AMENITY_LABEL) && (
+                <label className="form-field amenity-other">
+                  <span>Other amenities (optional)</span>
+                  <input
+                    name="amenity_other"
+                    type="text"
+                    placeholder="e.g. Balcony, Dishwasher"
+                    value={form.amenity_other}
+                    onChange={handleChange}
+                  />
+                  <small className="form-hint">Separate multiple items with commas.</small>
+                </label>
+              )}
             </div>
 
             <label className="form-field">

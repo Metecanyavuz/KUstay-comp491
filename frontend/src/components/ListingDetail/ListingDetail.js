@@ -17,6 +17,7 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { useAuth } from '../../context/AuthContext';
 import { getCSRFToken } from '../../utils/csrf';
+import { resolveMediaUrl } from '../../utils/media';
 import './ListingDetail.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -127,6 +128,7 @@ function ListingDetail() {
   const [comment, setComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewNotice, setReviewNotice] = useState('');
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -214,21 +216,31 @@ function ListingDetail() {
     [listing?.house_rules],
   );
 
-  const primaryImage =
-    listing?.image ||
-    listing?.images?.find((img) => img.is_primary)?.image_url ||
-    listing?.images?.[0]?.image_url ||
-    null;
+  const primaryImage = useMemo(() => {
+    const candidate =
+      listing?.image ||
+      listing?.images?.find((img) => img.is_primary)?.image_url ||
+      listing?.images?.[0]?.image_url ||
+      null;
+    return resolveMediaUrl(candidate);
+  }, [listing?.image, listing?.images]);
   const galleryImages = useMemo(() => {
     if (!listing?.images?.length) {
       return [];
     }
     const uniqueUrls = listing.images
       .map((img) => img.image_url)
+      .map((url) => resolveMediaUrl(url))
       .filter(Boolean)
       .filter((url) => url !== primaryImage);
     return uniqueUrls.slice(0, 6);
   }, [listing?.images, primaryImage]);
+  const lightboxImages = useMemo(() => {
+    if (primaryImage) {
+      return [primaryImage, ...galleryImages];
+    }
+    return [...galleryImages];
+  }, [primaryImage, galleryImages]);
 
   const listingCoords = useMemo(() => {
     const lat = Number(listing?.latitude);
@@ -248,6 +260,45 @@ function ListingDetail() {
   const existingStatusLabel = existingReview?.moderation_status
     ? existingReview.moderation_status.replace('_', ' ')
     : '';
+
+  useEffect(() => {
+    if (lightboxIndex === null) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (!lightboxImages.length) return;
+      if (event.key === 'Escape') {
+        setLightboxIndex(null);
+      }
+      if (event.key === 'ArrowRight') {
+        setLightboxIndex((prev) => (prev + 1) % lightboxImages.length);
+      }
+      if (event.key === 'ArrowLeft') {
+        setLightboxIndex((prev) =>
+          prev === 0 ? lightboxImages.length - 1 : prev - 1,
+        );
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxIndex, lightboxImages.length]);
+
+  const openLightbox = (index) => {
+    if (!lightboxImages.length) return;
+    setLightboxIndex(index);
+  };
+
+  const closeLightbox = () => setLightboxIndex(null);
+
+  const showPrev = () => {
+    if (!lightboxImages.length) return;
+    setLightboxIndex((prev) => (prev === 0 ? lightboxImages.length - 1 : prev - 1));
+  };
+
+  const showNext = () => {
+    if (!lightboxImages.length) return;
+    setLightboxIndex((prev) => (prev + 1) % lightboxImages.length);
+  };
 
   const handleDelete = async () => {
     if (!listingId) return;
@@ -331,8 +382,9 @@ function ListingDetail() {
   };
 
   return (
-    <div className="listing-detail-page">
-      <div className="detail-shell">
+    <>
+      <div className="listing-detail-page">
+        <div className="detail-shell">
         <div className="detail-nav">
           <button
             type="button"
@@ -345,7 +397,15 @@ function ListingDetail() {
           <Link to="/listings" className="ghost-button secondary">
             Browse listings
           </Link>
-          {user && (
+          {isOwner && (
+            <Link
+              to={`/listings/${listingId}/edit`}
+              className="ghost-button secondary"
+            >
+              Edit listing
+            </Link>
+          )}
+          {isOwner && (
             <button
               type="button"
               className="ghost-button danger"
@@ -373,9 +433,15 @@ function ListingDetail() {
           <>
             {deleteError && <div className="detail-error inline">{deleteError}</div>}
               <div className="detail-hero">
-                <div className="hero-image">
+              <div className="hero-image">
                   {primaryImage ? (
-                    <img src={primaryImage} alt={listing.title} />
+                    <button
+                      type="button"
+                      className="hero-image-button"
+                      onClick={() => openLightbox(0)}
+                    >
+                      <img src={primaryImage} alt={listing.title} />
+                    </button>
                   ) : (
                   <div className="hero-placeholder">
                     <Home size={36} />
@@ -413,6 +479,26 @@ function ListingDetail() {
             </div>
 
             <div className="detail-grid">
+              {galleryImages.length > 0 && (
+                <section className="panel gallery">
+                  <div className="panel-header">
+                    <h3>Gallery</h3>
+                  </div>
+                  <div className="gallery-grid">
+                    {galleryImages.map((url, index) => (
+                      <button
+                        type="button"
+                        key={url}
+                        className="gallery-image-button"
+                        onClick={() => openLightbox(primaryImage ? index + 1 : index)}
+                      >
+                        <img src={url} alt="Listing" />
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <section className="panel description">
                 <div className="panel-header">
                   <h2>About this place</h2>
@@ -525,19 +611,6 @@ function ListingDetail() {
                   </div>
                 </section>
               )}
-
-            {galleryImages.length > 0 && (
-              <section className="panel gallery">
-                <div className="panel-header">
-                  <h3>Gallery</h3>
-                </div>
-                <div className="gallery-grid">
-                  {galleryImages.map((url) => (
-                    <img key={url} src={url} alt="Listing" />
-                  ))}
-                </div>
-              </section>
-            )}
 
             <section className="panel reviews-panel">
               <div className="panel-header reviews-header">
@@ -674,8 +747,48 @@ function ListingDetail() {
             )}
           </>
         ) : null}
+        </div>
       </div>
-    </div>
+      {lightboxIndex !== null && lightboxImages[lightboxIndex] && (
+        <div className="lightbox-overlay" onClick={closeLightbox}>
+          <div className="lightbox-content" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="lightbox-close"
+              onClick={closeLightbox}
+              aria-label="Close"
+            >
+              X
+            </button>
+            {lightboxImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="lightbox-nav prev"
+                  onClick={showPrev}
+                  aria-label="Previous"
+                >
+                  &lt;
+                </button>
+                <button
+                  type="button"
+                  className="lightbox-nav next"
+                  onClick={showNext}
+                  aria-label="Next"
+                >
+                  &gt;
+                </button>
+              </>
+            )}
+            <img
+              src={lightboxImages[lightboxIndex]}
+              alt="Listing"
+              className="lightbox-image"
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

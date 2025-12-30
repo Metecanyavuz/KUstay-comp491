@@ -5,6 +5,7 @@ import HomePage from './components/HomePage/HomePage';
 import ListingsPage from './components/ListingsPage/ListingsPage';
 import ListingDetail from './components/ListingDetail/ListingDetail';
 import CreateListing from './components/CreateListing/CreateListing';
+import EditListing from './components/EditListing/EditListing';
 import Login from './components/Login/Login';
 import Signup from './components/Signup/Signup';
 import ForgotPassword from './components/ForgotPassword/ForgotPassword';
@@ -38,6 +39,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <CreateListing />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/listings/:listingId/edit"
+              element={
+                <PrivateRoute>
+                  <EditListing />
                 </PrivateRoute>
               }
             />

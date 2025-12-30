@@ -78,6 +78,10 @@ urlpatterns = [
     path('api/block-reviews/highlights/', api_views.block_review_highlights, name='api_block_review_highlights'),
     path('api/block-reviews/buildings/', api_views.block_review_buildings, name='api_block_review_buildings'),
     path('api/home/stats/', api_views.home_page_stats, name='api_home_stats'),
+    path('api/addresses/provinces/', api_views.address_provinces, name='api_address_provinces'),
+    path('api/addresses/districts/', api_views.address_districts, name='api_address_districts'),
+    path('api/addresses/neighborhoods/', api_views.address_neighborhoods, name='api_address_neighborhoods'),
+    path('api/addresses/streets/', api_views.address_streets, name='api_address_streets'),
 
 
     path('api/auth/signup/', api_views.signup_view),
@@ -89,5 +93,5 @@ urlpatterns = [
     path('api/auth/reset-password/', api_views.reset_password_view),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG or settings.SERVE_MEDIA:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

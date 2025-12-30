@@ -11,6 +11,8 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { AMENITY_OPTIONS } from '../../data/amenities';
+import { resolveMediaUrl } from '../../utils/media';
 import './ListingsPage.css';
 
 const LISTING_TYPE_LABELS = {
@@ -24,17 +26,6 @@ const ROOM_TYPE_LABELS = {
   shared: 'Shared Room',
   entire_place: 'Entire Place',
 };
-
-const AMENITY_OPTIONS = [
-  'Wi-Fi Included',
-  'Utilities Included',
-  'Washer/Dryer',
-  'Parking Spot',
-  'Pet Friendly',
-  'Air Conditioning',
-  'Furnished',
-  'Gym Access',
-];
 
 const createDefaultFilters = () => ({
   location: '',
@@ -626,10 +617,13 @@ function ListingsPage() {
             <div className="listings-grid">
               {filteredListings.map((listing) => {
                 const amenities = normalizeAmenities(listing.amenities);
-                const fallbackImage =
+                const fallbackImage = resolveMediaUrl(
                   listing.images?.find((img) => img.is_primary)?.image_url ||
-                  listing.images?.[0]?.image_url ||
-                  null;
+                    listing.images?.[0]?.image_url ||
+                    null,
+                );
+                const coverImage = resolveMediaUrl(listing.image);
+                const cardImage = coverImage || fallbackImage;
 
                 return (
                   <article
@@ -637,9 +631,9 @@ function ListingsPage() {
                     className="listing-card"
                   >
                     <div className="listing-card-image">
-                      {listing.image || fallbackImage ? (
+                      {cardImage ? (
                         <img
-                          src={listing.image || fallbackImage}
+                          src={cardImage}
                           alt={listing.title}
                         />
                       ) : (
