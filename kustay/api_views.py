@@ -81,9 +81,18 @@ class ListingViewSet(viewsets.ModelViewSet):
         listing = serializer.save(user=self.request.user)
         self._save_listing_images(listing)
         if listing.image:
+            try:
+                image_path = default_storage.path(listing.image.name)
+                storage_location = getattr(default_storage, "location", "")
+            except Exception:
+                image_path = ""
+                storage_location = ""
             logger.info(
-                "Cover image saved: %s exists=%s",
+                "Cover image saved: %s path=%s location=%s media_root=%s exists=%s",
                 listing.image.name,
+                image_path,
+                storage_location,
+                settings.MEDIA_ROOT,
                 default_storage.exists(listing.image.name),
             )
 
@@ -91,9 +100,18 @@ class ListingViewSet(viewsets.ModelViewSet):
         listing = serializer.save()
         self._save_listing_images(listing)
         if listing.image:
+            try:
+                image_path = default_storage.path(listing.image.name)
+                storage_location = getattr(default_storage, "location", "")
+            except Exception:
+                image_path = ""
+                storage_location = ""
             logger.info(
-                "Cover image saved: %s exists=%s",
+                "Cover image saved: %s path=%s location=%s media_root=%s exists=%s",
                 listing.image.name,
+                image_path,
+                storage_location,
+                settings.MEDIA_ROOT,
                 default_storage.exists(listing.image.name),
             )
 
@@ -159,9 +177,18 @@ class ListingViewSet(viewsets.ModelViewSet):
             ext = os.path.splitext(image_file.name)[1] or ".jpg"
             filename = f"listing_images/{listing.pk}_{uuid.uuid4().hex}{ext}"
             saved_path = default_storage.save(filename, image_file)
+            try:
+                absolute_path = default_storage.path(saved_path)
+                storage_location = getattr(default_storage, "location", "")
+            except Exception:
+                absolute_path = ""
+                storage_location = ""
             logger.info(
-                "Additional image saved: %s exists=%s",
+                "Additional image saved: %s path=%s location=%s media_root=%s exists=%s",
                 saved_path,
+                absolute_path,
+                storage_location,
+                settings.MEDIA_ROOT,
                 default_storage.exists(saved_path),
             )
             image_url = self.request.build_absolute_uri(default_storage.url(saved_path))
