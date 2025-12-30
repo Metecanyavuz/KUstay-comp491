@@ -27,7 +27,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import BlockReview, Conversation, Listing, Message, Profile, Review, User
+from .models import BlockReview, Conversation, Listing, ListingImage, Message, Profile, Review, User
 from .serializers import (
     ConversationDetailSerializer,
     ConversationSerializer,
@@ -43,17 +43,57 @@ FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
 logger = logging.getLogger(__name__)
 
 
+class IsListingOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_authenticated and obj.user_id == request.user.user_id
+
+
 class ListingViewSet(viewsets.ModelViewSet):
     queryset = Listing.objects.all().select_related("user")
     serializer_class = ListingSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    permission_classes = [
+        permissions.IsAuthenticatedOrReadOnly,
+        IsListingOwnerOrReadOnly,
+    ]
+
+    def create(self, request, *args, **kwargs):
+        error_response = self._validate_listing_images(request.FILES.getlist("images"))
+        if error_response:
+            return error_response
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        error_response = self._validate_listing_images(request.FILES.getlist("images"))
+        if error_response:
+            return error_response
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        error_response = self._validate_listing_images(request.FILES.getlist("images"))
+        if error_response:
+            return error_response
+        return super().partial_update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        listing = serializer.save(user=self.request.user)
+        self._save_listing_images(listing)
+
+    def perform_update(self, serializer):
+        listing = serializer.save()
+        self._save_listing_images(listing)
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        queryset = queryset.filter(is_active=True)
+        if self.action in ["retrieve", "update", "partial_update", "destroy"]:
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(Q(is_active=True) | Q(user=self.request.user))
+            else:
+                queryset = queryset.filter(is_active=True)
+        else:
+            queryset = queryset.filter(is_active=True)
 
         location = self.request.query_params.get("location", "").strip()
         price_min = self.request.query_params.get("price_min", "").strip()
@@ -85,6 +125,38 @@ class ListingViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(amenities__icontains=term)
 
         return queryset
+
+    def _validate_listing_images(self, image_files):
+        if not image_files:
+            return None
+        allowed_types = {"image/jpeg", "image/png", "image/webp"}
+        for image_file in image_files:
+            if image_file.content_type not in allowed_types:
+                return Response(
+                    {"error": "Only JPG, PNG, or WEBP images are allowed."},
+                    status=400,
+                )
+        return None
+
+    def _save_listing_images(self, listing):
+        image_files = self.request.FILES.getlist("images")
+        if not image_files:
+            return
+        has_primary = listing.images.filter(is_primary=True).exists()
+        for index, image_file in enumerate(image_files):
+            ext = os.path.splitext(image_file.name)[1] or ".jpg"
+            filename = f"listing_images/{listing.pk}_{uuid.uuid4().hex}{ext}"
+            saved_path = default_storage.save(filename, image_file)
+            image_url = self.request.build_absolute_uri(default_storage.url(saved_path))
+            is_primary = False
+            if not listing.image and not has_primary and index == 0:
+                is_primary = True
+                has_primary = True
+            ListingImage.objects.create(
+                listing=listing,
+                image_url=image_url,
+                is_primary=is_primary,
+            )
 
     @action(detail=True, methods=["get", "post"], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
     def reviews(self, request, pk=None):

@@ -11,6 +11,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { AMENITY_OPTIONS } from '../../data/amenities';
 import './ListingsPage.css';
 
 const LISTING_TYPE_LABELS = {
@@ -24,17 +25,6 @@ const ROOM_TYPE_LABELS = {
   shared: 'Shared Room',
   entire_place: 'Entire Place',
 };
-
-const AMENITY_OPTIONS = [
-  'Wi-Fi Included',
-  'Utilities Included',
-  'Washer/Dryer',
-  'Parking Spot',
-  'Pet Friendly',
-  'Air Conditioning',
-  'Furnished',
-  'Gym Access',
-];
 
 const createDefaultFilters = () => ({
   location: '',

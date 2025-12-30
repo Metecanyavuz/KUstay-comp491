@@ -1,0 +1,39 @@
+.edit-listing-page .current-image {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--ku-border);
+  border-radius: 12px;
+  background: #fff;
+  margin-bottom: 0.6rem;
+}
+
+.edit-listing-page .current-image img {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--ku-border);
+}
+
+.edit-listing-page .checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--ku-black);
+}
+
+.edit-listing-page .detail-loading,
+.edit-listing-page .detail-error {
+  background: #fff;
+  border-radius: 18px;
+  padding: 2rem;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--ku-black);
+}
