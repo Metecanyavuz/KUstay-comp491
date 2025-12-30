@@ -14,8 +14,8 @@ const ReportModal = ({ isOpen, onClose, reportType, reportedUserId, reportedList
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/reports/create/`,
+      await axios.post(
+        `/api/reports/create/`,
         {
           report_type: reportType,
           reported_user_id: reportedUserId,

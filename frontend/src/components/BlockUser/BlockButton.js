@@ -14,7 +14,7 @@ const BlockButton = ({ userId, username, onBlockChange }) => {
   const checkBlockStatus = async () => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/api/block-user/${userId}/check/`,
+        `/api/block-user/${userId}/check/`,
         { withCredentials: true }
       );
       setIsBlocked(response.data.is_blocked);
@@ -29,7 +29,7 @@ const BlockButton = ({ userId, username, onBlockChange }) => {
     setLoading(true);
     try {
       await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/block-user/${userId}/`,
+        `/api/block-user/${userId}/`,
         {},
         { withCredentials: true }
       );
@@ -47,7 +47,7 @@ const BlockButton = ({ userId, username, onBlockChange }) => {
     setLoading(true);
     try {
       await axios.delete(
-        `${process.env.REACT_APP_API_URL}/api/unblock-user/${userId}/`,
+        `/api/unblock-user/${userId}/`,
         { withCredentials: true }
       );
       setIsBlocked(false);

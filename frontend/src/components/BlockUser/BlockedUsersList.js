@@ -14,7 +14,7 @@ const BlockedUsersList = () => {
   const fetchBlockedUsers = async () => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/api/blocked-users/`,
+        `/api/blocked-users/`,
         { withCredentials: true }
       );
       setBlockedUsers(response.data.blocked_users);
@@ -33,7 +33,7 @@ const BlockedUsersList = () => {
 
     try {
       await axios.delete(
-        `${process.env.REACT_APP_API_URL}/api/unblock-user/${userId}/`,
+        `/api/unblock-user/${userId}/`,
         { withCredentials: true }
       );
       setBlockedUsers(blockedUsers.filter((entry) => entry.user.id !== userId));
