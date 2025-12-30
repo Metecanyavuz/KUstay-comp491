@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   User,
-  Mail,
   Phone,
   Calendar,
   DollarSign,
@@ -17,8 +16,7 @@ import {
   GraduationCap,
   MapPin,
   CheckCircle,
-  Flag,
-  Ban
+  Flag
 } from 'lucide-react';
 import './UserProfile.css';
 import ReportModal from '../Report/ReportModal';
