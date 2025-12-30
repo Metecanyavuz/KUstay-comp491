@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../../utils/axiosClient';
 import './BlockedUsersList.css';
 
 const BlockedUsersList = () => {
@@ -13,10 +13,7 @@ const BlockedUsersList = () => {
 
   const fetchBlockedUsers = async () => {
     try {
-      const response = await axios.get(
-        `/api/blocked-users/`,
-        { withCredentials: true }
-      );
+      const response = await apiClient.get(`/api/blocked-users/`);
       setBlockedUsers(response.data.blocked_users);
     } catch (err) {
       setError('Failed to load blocked users');
@@ -32,10 +29,7 @@ const BlockedUsersList = () => {
     }
 
     try {
-      await axios.delete(
-        `/api/unblock-user/${userId}/`,
-        { withCredentials: true }
-      );
+      await apiClient.delete(`/api/unblock-user/${userId}/`);
       setBlockedUsers(blockedUsers.filter((entry) => entry.user.id !== userId));
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to unblock user');

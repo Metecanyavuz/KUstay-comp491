@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../../utils/axiosClient';
 import './BlockButton.css';
 
 const BlockButton = ({ userId, username, onBlockChange }) => {
@@ -13,10 +13,7 @@ const BlockButton = ({ userId, username, onBlockChange }) => {
 
   const checkBlockStatus = async () => {
     try {
-      const response = await axios.get(
-        `/api/block-user/${userId}/check/`,
-        { withCredentials: true }
-      );
+      const response = await apiClient.get(`/api/block-user/${userId}/check/`);
       setIsBlocked(response.data.is_blocked);
     } catch (error) {
       console.error('Error checking block status:', error);
@@ -28,11 +25,7 @@ const BlockButton = ({ userId, username, onBlockChange }) => {
   const handleBlock = async () => {
     setLoading(true);
     try {
-      await axios.post(
-        `/api/block-user/${userId}/`,
-        {},
-        { withCredentials: true }
-      );
+      await apiClient.post(`/api/block-user/${userId}/`);
       setIsBlocked(true);
       if (onBlockChange) onBlockChange(true);
     } catch (error) {
@@ -46,10 +39,7 @@ const BlockButton = ({ userId, username, onBlockChange }) => {
   const handleUnblock = async () => {
     setLoading(true);
     try {
-      await axios.delete(
-        `/api/unblock-user/${userId}/`,
-        { withCredentials: true }
-      );
+      await apiClient.delete(`/api/unblock-user/${userId}/`);
       setIsBlocked(false);
       if (onBlockChange) onBlockChange(false);
     } catch (error) {

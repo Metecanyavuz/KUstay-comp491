@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import apiClient from '../../utils/axiosClient';
 import './ReportModal.css';
 
 const ReportModal = ({ isOpen, onClose, reportType, reportedUserId, reportedListingId, reportedMessageId }) => {
@@ -14,7 +14,7 @@ const ReportModal = ({ isOpen, onClose, reportType, reportedUserId, reportedList
     setLoading(true);
 
     try {
-      await axios.post(
+      await apiClient.post(
         `/api/reports/create/`,
         {
           report_type: reportType,
@@ -23,9 +23,6 @@ const ReportModal = ({ isOpen, onClose, reportType, reportedUserId, reportedList
           reported_message_id: reportedMessageId,
           description: description.trim(),
         },
-        {
-          withCredentials: true,
-        }
       );
 
       setSuccess(true);
