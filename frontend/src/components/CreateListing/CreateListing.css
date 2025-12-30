@@ -203,6 +203,84 @@
   margin-top: -0.25rem;
 }
 
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.file-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--ku-text-muted);
+}
+
+.file-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--ku-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+  background: #fff;
+  color: var(--ku-black);
+}
+
+.file-chip button {
+  border: none;
+  background: transparent;
+  color: var(--ku-red-dark);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.file-list-header .ghost-button {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.amenity-field {
+  grid-column: 1 / -1;
+}
+
+.amenities-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.amenity-chip {
+  border: 1px solid var(--ku-border);
+  background: var(--ku-rose-100);
+  color: var(--ku-black);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.amenity-chip.active {
+  background: var(--ku-red);
+  border-color: var(--ku-red);
+  color: #fff;
+}
+
+.amenity-other {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 768px) {
   .create-listing-header {
     flex-direction: column;

@@ -126,6 +126,17 @@
   object-fit: cover;
 }
 
+.hero-image-button {
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+  background: transparent;
+  display: block;
+}
+
 .hero-placeholder {
   width: 100%;
   height: 100%;
@@ -294,6 +305,82 @@
   object-fit: cover;
   border-radius: 12px;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.gallery-image-button {
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 24px;
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: min(900px, 90vw);
+  width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.2);
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 75vh;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  background: #fff;
+  color: var(--ku-black);
+  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.15);
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: #fff;
+  color: var(--ku-black);
+  font-size: 1.1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.15);
+}
+
+.lightbox-nav.prev {
+  left: 12px;
+}
+
+.lightbox-nav.next {
+  right: 12px;
 }
 
 .reviews-panel {

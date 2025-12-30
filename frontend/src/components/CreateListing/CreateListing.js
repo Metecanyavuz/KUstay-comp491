@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Home, MapPin, PlusCircle } from 'lucide-react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { getCSRFToken } from '../../utils/csrf';
+import { AMENITY_OPTIONS } from '../../data/amenities';
 import './CreateListing.css';
 
 const round6 = (value) => Number.parseFloat(value).toFixed(6);
@@ -22,7 +23,8 @@ const defaultForm = {
   available_from: '',
   total_rooms: 1,
   available_rooms: 1,
-  amenities: '',
+  amenities: [],
+  amenity_other: '',
   house_rules: '',
 };
 
@@ -38,10 +40,14 @@ const ROOM_TYPE_OPTIONS = [
   { value: 'entire_place', label: 'Entire Place' },
 ];
 
+const OTHER_AMENITY_LABEL = 'Other';
+
 function CreateListing() {
   const navigate = useNavigate();
   const [form, setForm] = useState(defaultForm);
   const [imageFile, setImageFile] = useState(null);
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const galleryInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [provinceData, setProvinceData] = useState([]);
@@ -342,6 +348,49 @@ function CreateListing() {
     setImageFile(file || null);
   };
 
+  const handleGalleryChange = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    setGalleryFiles((prev) => {
+      const seen = new Set(prev.map((file) => `${file.name}-${file.size}-${file.lastModified}`));
+      const next = [...prev];
+      files.forEach((file) => {
+        const key = `${file.name}-${file.size}-${file.lastModified}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          next.push(file);
+        }
+      });
+      return next;
+    });
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
+    }
+  };
+
+  const handleGalleryRemove = (index) => {
+    setGalleryFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleGalleryClear = () => {
+    setGalleryFiles([]);
+  };
+
+  const handleAmenityToggle = (amenity) => {
+    setForm((prev) => {
+      const currentAmenities = Array.isArray(prev.amenities) ? prev.amenities : [];
+      const hasAmenity = currentAmenities.includes(amenity);
+      const nextAmenities = hasAmenity
+        ? currentAmenities.filter((item) => item !== amenity)
+        : [...currentAmenities, amenity];
+      return {
+        ...prev,
+        amenities: nextAmenities,
+        amenity_other: amenity === OTHER_AMENITY_LABEL && hasAmenity ? '' : prev.amenity_other,
+      };
+    });
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
@@ -356,10 +405,32 @@ function CreateListing() {
       return;
     }
 
-    const amenities = form.amenities
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const selectedAmenities = Array.isArray(form.amenities)
+      ? form.amenities
+      : form.amenities
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean);
+    const hasOtherAmenity = selectedAmenities.includes(OTHER_AMENITY_LABEL);
+    const otherAmenity = form.amenity_other.trim();
+    const combinedAmenities = selectedAmenities.filter(
+      (item) => item !== OTHER_AMENITY_LABEL,
+    );
+    if (hasOtherAmenity && otherAmenity) {
+      const extraAmenities = otherAmenity
+        .split(/,|\n/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      combinedAmenities.push(...extraAmenities);
+    }
+    const amenities = combinedAmenities.reduce((acc, item) => {
+      const key = item.toLowerCase();
+      if (!acc.seen.has(key)) {
+        acc.seen.add(key);
+        acc.list.push(item);
+      }
+      return acc;
+    }, { list: [], seen: new Set() }).list;
 
     const city = form.city.trim();
     const district = form.district.trim();
@@ -411,6 +482,9 @@ function CreateListing() {
 
     if (imageFile) {
       payload.append('image', imageFile);
+    }
+    if (galleryFiles.length) {
+      galleryFiles.forEach((file) => payload.append('images', file));
     }
 
     setSubmitting(true);
@@ -611,6 +685,48 @@ function CreateListing() {
                   onChange={handleFileChange}
                 />
               </label>
+              <label className="form-field">
+                <span>Additional photos (optional)</span>
+                <input
+                  name="images"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={galleryInputRef}
+                  onChange={handleGalleryChange}
+                />
+                <small className="form-hint">
+                  Select multiple images or add more after the first pick.
+                </small>
+                {galleryFiles.length > 0 && (
+                  <div className="file-list">
+                    <div className="file-list-header">
+                      <span>{galleryFiles.length} selected</span>
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={handleGalleryClear}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="file-chips">
+                      {galleryFiles.map((file, index) => (
+                        <span key={`${file.name}-${file.size}-${file.lastModified}`} className="file-chip">
+                          {file.name}
+                          <button
+                            type="button"
+                            onClick={() => handleGalleryRemove(index)}
+                            aria-label={`Remove ${file.name}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </label>
             </div>
           </section>
 
@@ -777,16 +893,37 @@ function CreateListing() {
                   onChange={handleChange}
                 />
               </label>
-              <label className="form-field">
-                <span>Amenities (comma separated)</span>
-                <input
-                  name="amenities"
-                  type="text"
-                  placeholder="Wi-Fi, Parking, AC"
-                  value={form.amenities}
-                  onChange={handleChange}
-                />
-              </label>
+              <div className="form-field amenity-field">
+                <span>Amenities</span>
+                <div className="amenities-grid">
+                  {[...AMENITY_OPTIONS, OTHER_AMENITY_LABEL].map((amenity) => (
+                    <button
+                      key={amenity}
+                      type="button"
+                      className={`amenity-chip ${
+                        form.amenities.includes(amenity) ? 'active' : ''
+                      }`}
+                      onClick={() => handleAmenityToggle(amenity)}
+                    >
+                      {amenity}
+                    </button>
+                  ))}
+                </div>
+                <small className="form-hint">Select all that apply.</small>
+              </div>
+              {form.amenities.includes(OTHER_AMENITY_LABEL) && (
+                <label className="form-field amenity-other">
+                  <span>Other amenities (optional)</span>
+                  <input
+                    name="amenity_other"
+                    type="text"
+                    placeholder="e.g. Balcony, Dishwasher"
+                    value={form.amenity_other}
+                    onChange={handleChange}
+                  />
+                  <small className="form-hint">Separate multiple items with commas.</small>
+                </label>
+              )}
             </div>
 
             <label className="form-field">
