@@ -47,6 +47,8 @@ function Messages() {
   const [attachment, setAttachment] = useState(null);
   const [attachmentPreview, setAttachmentPreview] = useState('');
   const [showMediaPanel, setShowMediaPanel] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockMessage, setBlockMessage] = useState('');
   const messagesListRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -111,6 +113,8 @@ function Messages() {
   const selectConversation = async (conversation) => {
     setSelectedConversation(conversation);
     setShowMediaPanel(false);
+    setIsBlocked(!!conversation.is_blocked);
+    setBlockMessage(conversation.is_blocked ? 'You blocked this user. Messaging is disabled.' : '');
     setAttachment(null);
     if (attachmentPreview) {
       URL.revokeObjectURL(attachmentPreview);
@@ -134,6 +138,12 @@ function Messages() {
       }
       const data = await response.json();
       setMessages(data);
+      // If the API signals block via serializer, keep it in sync.
+      const convoMeta = conversations.find((c) => c.conversation_id === conversationId);
+      if (convoMeta?.is_blocked) {
+        setIsBlocked(true);
+        setBlockMessage('You blocked this user. Messaging is disabled.');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -203,6 +213,10 @@ function Messages() {
     if (!selectedConversation) {
       return;
     }
+    if (isBlocked) {
+        setError(blockMessage || 'Messaging is disabled.');
+        return;
+    }
     if (!newMessage.trim() && !attachment) {
       return;
     }
@@ -228,7 +242,16 @@ function Messages() {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 403) {
+          const message =
+            errorData.error ||
+            'Messaging is disabled because one of you has blocked the other.';
+          setIsBlocked(true);
+          setBlockMessage(message);
+          throw new Error(message);
+        }
+        throw new Error(errorData.error || 'Failed to send message');
       }
 
       const message = await response.json();
@@ -374,6 +397,12 @@ function Messages() {
               </div>
             )}
 
+            {isBlocked && (
+              <div className="block-banner">
+                <p>{blockMessage || 'Messaging is disabled because one of you has blocked the other.'}</p>
+              </div>
+            )}
+
             <div className="messages-list" ref={messagesListRef}>
               {loadingMessages ? (
                 <p>Loading messages...</p>
@@ -441,8 +470,12 @@ function Messages() {
                 placeholder="Type your message..."
                 value={newMessage}
                 onChange={(e) => handleDraftChange(e.target.value)}
+                disabled={isBlocked}
               />
-              <button onClick={handleSendMessage} disabled={!newMessage.trim() && !attachment}>
+              <button
+                onClick={handleSendMessage}
+                disabled={isBlocked || (!newMessage.trim() && !attachment)}
+              >
                 Send
               </button>
             </div>

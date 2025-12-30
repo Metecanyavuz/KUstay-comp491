@@ -335,6 +335,16 @@ def matches_view(request):
     # Ensure the requesting user has fresh scores before rendering.
     calculate_matches_for_user(request.user)
 
+    blocked_pairs = BlockedUser.objects.filter(
+        Q(blocker=request.user) | Q(blocked=request.user)
+    ).values_list("blocker_id", "blocked_id")
+    blocked_ids = {
+        user_id
+        for pair in blocked_pairs
+        for user_id in pair
+        if user_id is not None and user_id != request.user.pk
+    }
+
     matches_qs = (
         MatchCompatibility.objects.filter(
             Q(user1=request.user, user2__is_verified=True, user2__profile__isnull=False)
@@ -351,6 +361,8 @@ def matches_view(request):
     display_matches = []
     for match in matches_qs:
         partner = match.user2 if match.user1_id == request.user.pk else match.user1
+        if partner.pk in blocked_ids:
+            continue
         display_matches.append(
             {
                 "user": partner,
@@ -405,6 +417,16 @@ class TopMatchesAPIView(APIView):
         except (TypeError, ValueError):
             limit = 20
 
+        blocked_pairs = BlockedUser.objects.filter(
+            Q(blocker=user) | Q(blocked=user)
+        ).values_list("blocker_id", "blocked_id")
+        blocked_ids = {
+            user_id
+            for pair in blocked_pairs
+            for user_id in pair
+            if user_id is not None and user_id != user.pk
+        }
+
         matches_qs = (
             MatchCompatibility.objects.filter(
                 Q(user1=user, user2__is_verified=True, user2__profile__isnull=False)
@@ -421,6 +443,8 @@ class TopMatchesAPIView(APIView):
         results = []
         for match in matches_qs:
             partner = match.user2 if match.user1_id == user.pk else match.user1
+            if partner.pk in blocked_ids:
+                continue
             partner_profile = getattr(partner, "profile", None)
             results.append(
                 {

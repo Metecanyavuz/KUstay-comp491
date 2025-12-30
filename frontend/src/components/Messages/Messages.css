@@ -194,6 +194,16 @@
   font-weight: 600;
 }
 
+.block-banner {
+  border: 1px solid rgba(195, 17, 46, 0.25);
+  background: rgba(195, 17, 46, 0.08);
+  color: var(--ku-red-dark);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
 .messages-list {
   flex: 1;
   overflow-y: auto;

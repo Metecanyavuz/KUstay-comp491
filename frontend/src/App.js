@@ -19,6 +19,7 @@ import Messages from './components/Messages/Messages';
 import MapView from './components/MapView/MapView';
 import Reviews from './components/Reviews/Reviews';
 import ReviewsBuilding from './components/Reviews/ReviewsBuilding';
+import BlockedUsersList from './components/BlockUser/BlockedUsersList';
 import './App.css';
 
 function App() {
@@ -80,6 +81,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Messages />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/blocked-users"
+              element={
+                <PrivateRoute>
+                  <BlockedUsersList />
                 </PrivateRoute>
               }
             />

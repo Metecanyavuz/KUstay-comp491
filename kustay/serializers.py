@@ -1,6 +1,7 @@
+from django.db.models import Q
 from rest_framework import serializers
 
-from .models import BlockReview, Conversation, Listing, ListingImage, Message, Profile, Review, Faculty, Department
+from .models import BlockReview, Conversation, Listing, ListingImage, Message, Profile, Review, Faculty, Department, BlockedUser
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -303,6 +304,7 @@ class MessageSerializer(serializers.ModelSerializer):
 class ConversationSerializer(serializers.ModelSerializer):
     partner = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
+    is_blocked = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -312,6 +314,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             "last_message",
             "created_at",
             "last_message_at",
+            "is_blocked",
         ]
 
     def _get_partner(self, obj):
@@ -336,6 +339,16 @@ class ConversationSerializer(serializers.ModelSerializer):
         if not last_msg:
             return None
         return MessageSerializer(last_msg, context=self.context).data
+
+    def get_is_blocked(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return False
+        partner = obj.user2 if obj.user1_id == user.pk else obj.user1
+        return BlockedUser.objects.filter(
+            Q(blocker=user, blocked=partner) | Q(blocker=partner, blocked=user)
+        ).exists()
 
 
 class ConversationDetailSerializer(ConversationSerializer):
