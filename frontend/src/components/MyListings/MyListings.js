@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axiosClient from '../../utils/axiosClient';
 import { Plus, Edit, Trash2, Eye, Home, Calendar, DollarSign, MapPin } from 'lucide-react';
-import './MyListings.css';
+import './MyListingsTab.css';
 
-function MyListings() {
+function MyListingsTab() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,12 +20,11 @@ function MyListings() {
   const fetchMyListings = async () => {
     try {
       setLoading(true);
-      const response = await axiosClient.get('/api/listings/');
-      // Filter to show only current user's listings
-      const myListings = response.data.filter(listing => 
-        listing.user === user?.username || listing.user === user?.email
-      );
-      setListings(myListings);
+      // YENİ ENDPOINT: /api/listings/my_listings/
+      // Bu endpoint kullanıcının TÜM listing'lerini döndürür (active + inactive)
+      const response = await axiosClient.get('/api/listings/my_listings/');
+      
+      setListings(response.data);
       setError(null);
     } catch (err) {
       console.error('Error fetching listings:', err);
@@ -52,9 +51,14 @@ function MyListings() {
       const response = await axiosClient.patch(`/api/listings/${listing.listing_id}/`, {
         is_active: !listing.is_active
       });
+      
+      // Listing'i state'de güncelle (kaybolmaz, sadece is_active değişir)
       setListings(listings.map(l => 
         l.listing_id === listing.listing_id ? response.data : l
       ));
+      
+      // Başarı mesajı (opsiyonel)
+      // alert(`Listing ${response.data.is_active ? 'activated' : 'deactivated'} successfully!`);
     } catch (err) {
       console.error('Error updating listing status:', err);
       alert('Failed to update listing status. Please try again.');
@@ -63,17 +67,20 @@ function MyListings() {
 
   if (loading) {
     return (
-      <div className="my-listings-container">
-        <div className="loading-spinner">Loading your listings...</div>
+      <div className="my-listings-tab">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Loading your listings...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="my-listings-container">
-      <div className="my-listings-header">
-        <div className="header-content">
-          <h1>My Listings</h1>
+    <div className="my-listings-tab">
+      <div className="listings-header">
+        <div>
+          <h2>My Listings</h2>
           <p className="subtitle">Manage your property listings</p>
         </div>
         <button 
@@ -94,7 +101,7 @@ function MyListings() {
       {listings.length === 0 ? (
         <div className="empty-state">
           <Home size={64} className="empty-icon" />
-          <h2>No Listings Yet</h2>
+          <h3>No Listings Yet</h3>
           <p>Create your first listing to start finding roommates!</p>
           <button 
             className="create-first-listing-btn"
@@ -219,4 +226,4 @@ function MyListings() {
   );
 }
 
-export default MyListings;
+export default MyListingsTab;

@@ -201,6 +201,18 @@ class ListingViewSet(viewsets.ModelViewSet):
                 image_url=image_url,
                 is_primary=is_primary,
             )
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def my_listings(self, request):
+        """
+        Get all listings owned by the authenticated user (active + inactive)
+        Endpoint: /api/listings/my_listings/
+        """
+        user_listings = Listing.objects.filter(
+            user=request.user
+        ).select_related("user").order_by("-created_at")
+        
+        serializer = self.get_serializer(user_listings, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["get", "post"], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
     def reviews(self, request, pk=None):
