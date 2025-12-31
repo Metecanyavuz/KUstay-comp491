@@ -20,12 +20,9 @@ function MyListingsTab() {
   const fetchMyListings = async () => {
     try {
       setLoading(true);
-      const response = await axiosClient.get('/api/listings/');
-      // Filter to show only current user's listings
-      const myListings = response.data.filter(listing => 
-        listing.user === user?.username || listing.user === user?.email
-      );
-      setListings(myListings);
+      // Use dedicated endpoint that returns all of the current user's listings (active + inactive)
+      const response = await axiosClient.get('/api/listings/my_listings/');
+      setListings(response.data || []);
       setError(null);
     } catch (err) {
       console.error('Error fetching listings:', err);
