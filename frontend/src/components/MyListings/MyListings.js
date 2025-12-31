@@ -18,22 +18,29 @@ function MyListingsTab() {
   }, []);
 
   const fetchMyListings = async () => {
-    try {
-      setLoading(true);
-      // YENİ ENDPOINT: /api/listings/my_listings/
-      // Bu endpoint kullanıcının TÜM listing'lerini döndürür (active + inactive)
-      const response = await axiosClient.get('/api/listings/my_listings/');
-      
-      setListings(response.data);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching listings:', err);
-      setError('Failed to load your listings. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  try {
+    setLoading(true);
+    console.log('🔍 Fetching my listings from:', '/api/listings/my_listings/');
+    
+    const response = await axiosClient.get('/api/listings/my_listings/');
+    
+    console.log('✅ Response received:', response.data);
+    console.log('📊 Total listings:', response.data.length);
+    console.log('📋 Listings detail:', response.data.map(l => ({
+      id: l.listing_id,
+      title: l.title,
+      is_active: l.is_active
+    })));
+    
+    setListings(response.data);
+    setError(null);
+  } catch (err) {
+    console.error('❌ Error fetching listings:', err);
+    setError('Failed to load your listings. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
   const handleDelete = async (listingId) => {
     try {
       await axiosClient.delete(`/api/listings/${listingId}/`);
