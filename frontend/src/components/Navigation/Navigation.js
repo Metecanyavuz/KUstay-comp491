@@ -12,7 +12,6 @@ function Navigation() {
   const handleLogout = async () => {
     try {
       await logout();
-      // Redirect to home page after successful logout
       window.location.href = '/';
     } catch (error) {
       console.error('Logout failed:', error);

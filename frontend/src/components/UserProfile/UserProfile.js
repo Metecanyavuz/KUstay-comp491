@@ -19,8 +19,7 @@ import {
   Flag
 } from 'lucide-react';
 import './UserProfile.css';
-import ReportModal from '../Report/ReportModal';
-import BlockButton from '../BlockUser/BlockButton';
+import UserActionsMenu from '../Shared/UserActionsMenu';  // YENİ IMPORT
 
 function UserProfile() {
   const { userId } = useParams();
@@ -30,7 +29,6 @@ function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [photoError, setPhotoError] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -184,22 +182,19 @@ function UserProfile() {
             </div>
           </div>
 
+          {/* GÜNCELLEME: Eski butonlar yerine UserActionsMenu ve Message butonu */}
           {currentUser && currentUser.id !== parseInt(userId) && (
             <div className="user-actions">
               <button className="message-button-header" onClick={startConversation}>
                 <MessageCircle size={20} />
                 Send Message
               </button>
-              <button
-                className="report-button-header"
-                onClick={() => setShowReportModal(true)}
-                title="Report User"
-              >
-                <Flag size={20} />
-              </button>
-              <BlockButton
+              
+              {/* ÜÇ NOKTA MENÜSÜ - BURAYA EKLENDİ */}
+              <UserActionsMenu 
                 userId={parseInt(userId)}
-                username={profile.first_name || 'User'}
+                username={profile.first_name || profile.user?.email || 'User'}
+                reportType="user"
                 onBlockChange={(isBlocked) => {
                   if (isBlocked) {
                     navigate('/matches');
@@ -356,14 +351,6 @@ function UserProfile() {
             </div>
           )}
         </div>
-
-        {/* Report Modal */}
-        <ReportModal
-          isOpen={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          reportType="user"
-          reportedUserId={parseInt(userId)}
-        />
       </div>
     </div>
   );

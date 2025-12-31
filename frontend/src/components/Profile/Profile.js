@@ -16,13 +16,17 @@ import {
   AlertCircle,
   Briefcase,
   GraduationCap,
-  MapPin
+  MapPin,
+  Building2,
+  UserX
 } from 'lucide-react';
 import './Profile.css';
 
 import { getCSRFToken } from '../../utils/csrf';
 import LocationSelector from '../Shared/LocationSelector';
 import DepartmentSelector from '../Shared/DepartmentSelector';
+import MyListingsTab from './MyListingsTab';
+import BlockedUsersTab from './BlockedUsersTab';
 
 
 function Profile() {
@@ -36,6 +40,7 @@ function Profile() {
   const [photoError, setPhotoError] = useState(false);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState('');
+  const [activeTab, setActiveTab] = useState('profile'); // profile, listings, blocked
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -117,7 +122,7 @@ function Profile() {
     preferred_neighborhoods: Array.isArray(data.preferred_neighborhoods)
       ? data.preferred_neighborhoods
       : data.preferred_neighborhoods
-        ? [data.preferred_neighborhoods] // Fallback for single string
+        ? [data.preferred_neighborhoods]
         : [],
     move_in_date: data.move_in_date || '',
     smoker: data.smoker || false,
@@ -139,16 +144,12 @@ function Profile() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
-
-        // Set form data with fetched profile
         setFormData(mapProfileToForm(data));
         setPhotoFile(null);
         setPhotoPreview('');
         setPhotoError(false);
-
         setIsEditing(false);
       } else if (response.status === 404) {
-        // Profile doesn't exist yet, show form
         setError('Please complete your profile to continue');
         setIsEditing(true);
       } else {
@@ -268,7 +269,6 @@ function Profile() {
         const errorData = await response.json();
         console.error('Server error:', errorData);
 
-        // Format error message nicely
         if (typeof errorData.error === 'object') {
           const errorMessages = Object.entries(errorData.error)
             .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
@@ -340,11 +340,8 @@ function Profile() {
             </div>
           </div>
 
-          {!isEditing && profile && (
+          {!isEditing && profile && activeTab === 'profile' && (
             <div className="header-actions">
-              <a className="secondary-button manage-blocks-button" href="/blocked-users">
-                Manage blocked users
-              </a>
               <button className="edit-button" onClick={() => setIsEditing(true)}>
                 <Edit size={20} />
                 Edit Profile
@@ -353,417 +350,457 @@ function Profile() {
           )}
         </div>
 
+        {/* Tabs Navigation - 3 TAB */}
+        <div className="tabs-container">
+          <button 
+            className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('profile')}
+          >
+            <User size={20} />
+            Profile Info
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'listings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('listings')}
+          >
+            <Building2 size={20} />
+            My Listings
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'blocked' ? 'active' : ''}`}
+            onClick={() => setActiveTab('blocked')}
+          >
+            <UserX size={20} />
+            Blocked Users
+          </button>
+        </div>
+
         {/* Messages */}
-        {error && (
+        {error && activeTab === 'profile' && (
           <div className="error-alert">
             <AlertCircle size={20} />
             <span>{error}</span>
           </div>
         )}
 
-        {successMessage && (
+        {successMessage && activeTab === 'profile' && (
           <div className="success-alert">
             <CheckCircle size={20} />
             <span>{successMessage}</span>
           </div>
         )}
 
-        {/* Profile Form/View */}
-        {isEditing ? (
-          <form onSubmit={handleSubmit} className="profile-form">
-            {/* Personal Information */}
-            <div className="form-section">
-              <h2>
-                <User size={24} />
-                Personal Information
-              </h2>
+        {/* Tab Content */}
+        {activeTab === 'profile' && (
+          <>
+            {/* Profile Form/View */}
+            {isEditing ? (
+              <form onSubmit={handleSubmit} className="profile-form">
+                {/* Personal Information */}
+                <div className="form-section">
+                  <h2>
+                    <User size={24} />
+                    Personal Information
+                  </h2>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="first_name">First Name *</label>
-                  <input
-                    type="text"
-                    id="first_name"
-                    name="first_name"
-                    value={formData.first_name}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="last_name">Last Name *</label>
-                  <input
-                    type="text"
-                    id="last_name"
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="phone_number">Phone Number</label>
-                  <input
-                    type="tel"
-                    id="phone_number"
-                    name="phone_number"
-                    value={formData.phone_number}
-                    onChange={handleChange}
-                    placeholder="+90 555 123 4567"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="email">Email</label>
-                  <input
-                    type="email"
-                    value={user.email}
-                    disabled
-                    className="disabled-input"
-                  />
-                </div>
-              </div>
-
-              <div className="photo-upload">
-                <label htmlFor="profile_photo_url">Profile Photo</label>
-                <div className="photo-input">
-                  <div className="photo-preview">
-                    {renderAvatar()}
-                  </div>
-                  <div className="photo-fields">
-                    <label className="file-input-label">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="first_name">First Name *</label>
                       <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
+                        type="text"
+                        id="first_name"
+                        name="first_name"
+                        value={formData.first_name}
+                        onChange={handleChange}
+                        required
                       />
-                      Choose a photo
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="last_name">Last Name *</label>
+                      <input
+                        type="text"
+                        id="last_name"
+                        name="last_name"
+                        value={formData.last_name}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="phone_number">Phone Number</label>
+                      <input
+                        type="tel"
+                        id="phone_number"
+                        name="phone_number"
+                        value={formData.phone_number}
+                        onChange={handleChange}
+                        placeholder="+90 555 123 4567"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="email">Email</label>
+                      <input
+                        type="email"
+                        value={user.email}
+                        disabled
+                        className="disabled-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="photo-upload">
+                    <label htmlFor="profile_photo_url">Profile Photo</label>
+                    <div className="photo-input">
+                      <div className="photo-preview">
+                        {renderAvatar()}
+                      </div>
+                      <div className="photo-fields">
+                        <label className="file-input-label">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                          />
+                          Choose a photo
+                        </label>
+                        <div className="divider-text">or</div>
+                        <input
+                          type="url"
+                          id="profile_photo_url"
+                          name="profile_photo_url"
+                          value={formData.profile_photo_url}
+                          onChange={handleChange}
+                          placeholder="https://example.com/photo.jpg"
+                        />
+                        <small>Upload JPG, PNG, or WEBP (max 5MB) or paste a direct link.</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  {user.user_type === 'KU_Student' && (
+                    <div className="form-row">
+                      <div className="form-group full-width">
+                        <label>Departments </label>
+                        <DepartmentSelector
+                          selectedDepartments={formData.departments}
+                          onChange={handleDepartmentsChange}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Housing Preferences */}
+                <div className="form-section">
+                  <h2>
+                    <Home size={24} />
+                    Housing Preferences
+                  </h2>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="budget_min">Budget Min (₺/month) *</label>
+                      <input
+                        type="number"
+                        id="budget_min"
+                        name="budget_min"
+                        value={formData.budget_min}
+                        onChange={handleChange}
+                        required
+                        placeholder="3000"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="budget_max">Budget Max (₺/month) *</label>
+                      <input
+                        type="number"
+                        id="budget_max"
+                        name="budget_max"
+                        value={formData.budget_max}
+                        onChange={handleChange}
+                        required
+                        placeholder="5000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Preferred Neighborhoods</label>
+                    <LocationSelector
+                      selectedNeighborhoods={formData.preferred_neighborhoods}
+                      onChange={handleNeighborhoodsChange}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="room_type_preference">Room Type Preference</label>
+                      <select
+                        id="room_type_preference"
+                        name="room_type_preference"
+                        value={formData.room_type_preference}
+                        onChange={handleChange}
+                      >
+                        <option value="private">Private Room</option>
+                        <option value="shared">Shared Room</option>
+                        <option value="entire_place">Entire Place</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="move_in_date">Preferred Move-in Date</label>
+                      <input
+                        type="date"
+                        id="move_in_date"
+                        name="move_in_date"
+                        value={formData.move_in_date}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lifestyle Preferences */}
+                <div className="form-section">
+                  <h2>
+                    <Sparkles size={24} />
+                    Lifestyle Preferences
+                  </h2>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="sleep_schedule">Sleep Schedule</label>
+                      <select
+                        id="sleep_schedule"
+                        name="sleep_schedule"
+                        value={formData.sleep_schedule}
+                        onChange={handleChange}
+                      >
+                        <option value="early_bird">Early Bird</option>
+                        <option value="night_owl">Night Owl</option>
+                        <option value="flexible">Flexible</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="cleanliness_level">Cleanliness Level</label>
+                      <select
+                        id="cleanliness_level"
+                        name="cleanliness_level"
+                        value={formData.cleanliness_level}
+                        onChange={handleChange}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="smoker"
+                        checked={formData.smoker}
+                        onChange={handleChange}
+                      />
+                      <span>I am a smoker</span>
                     </label>
-                    <div className="divider-text">or</div>
-                    <input
-                      type="url"
-                      id="profile_photo_url"
-                      name="profile_photo_url"
-                      value={formData.profile_photo_url}
+
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="pets"
+                        checked={formData.pets}
+                        onChange={handleChange}
+                      />
+                      <span>I have pets</span>
+                    </label>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="lifestyle_notes">Additional Notes</label>
+                    <textarea
+                      id="lifestyle_notes"
+                      name="lifestyle_notes"
+                      value={formData.lifestyle_notes}
                       onChange={handleChange}
-                      placeholder="https://example.com/photo.jpg"
-                    />
-                    <small>Upload JPG, PNG, or WEBP (max 5MB) or paste a direct link.</small>
-                  </div>
-                </div>
-              </div>
-
-              {user.user_type === 'KU_Student' && (
-                <div className="form-row">
-                  <div className="form-group full-width">
-                    <label>Departments </label>
-                    <DepartmentSelector
-                      selectedDepartments={formData.departments}
-                      onChange={handleDepartmentsChange}
+                      rows="4"
+                      placeholder="Tell potential roommates about yourself, your hobbies, preferences, etc."
                     />
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Housing Preferences */}
-            <div className="form-section">
-              <h2>
-                <Home size={24} />
-                Housing Preferences
-              </h2>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="budget_min">Budget Min (₺/month) *</label>
-                  <input
-                    type="number"
-                    id="budget_min"
-                    name="budget_min"
-                    value={formData.budget_min}
-                    onChange={handleChange}
-                    required
-                    placeholder="3000"
-                  />
+                {/* Form Actions */}
+                <div className="form-actions">
+                  {profile && (
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={() => {
+                        setIsEditing(false);
+                        if (profile) {
+                          setFormData(mapProfileToForm(profile));
+                          setPhotoFile(null);
+                          setPhotoPreview('');
+                          setPhotoError(false);
+                        }
+                      }}
+                    >
+                      <X size={20} />
+                      Cancel
+                    </button>
+                  )}
+                  <button type="submit" className="save-button" disabled={saving}>
+                    <Save size={20} />
+                    {saving ? 'Saving...' : 'Save Profile'}
+                  </button>
                 </div>
-
-                <div className="form-group">
-                  <label htmlFor="budget_max">Budget Max (₺/month) *</label>
-                  <input
-                    type="number"
-                    id="budget_max"
-                    name="budget_max"
-                    value={formData.budget_max}
-                    onChange={handleChange}
-                    required
-                    placeholder="5000"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Preferred Neighborhoods</label>
-                <LocationSelector
-                  selectedNeighborhoods={formData.preferred_neighborhoods}
-                  onChange={handleNeighborhoodsChange}
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="room_type_preference">Room Type Preference</label>
-                  <select
-                    id="room_type_preference"
-                    name="room_type_preference"
-                    value={formData.room_type_preference}
-                    onChange={handleChange}
-                  >
-                    <option value="private">Private Room</option>
-                    <option value="shared">Shared Room</option>
-                    <option value="entire_place">Entire Place</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="move_in_date">Preferred Move-in Date</label>
-                  <input
-                    type="date"
-                    id="move_in_date"
-                    name="move_in_date"
-                    value={formData.move_in_date}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Lifestyle Preferences */}
-            <div className="form-section">
-              <h2>
-                <Sparkles size={24} />
-                Lifestyle Preferences
-              </h2>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="sleep_schedule">Sleep Schedule</label>
-                  <select
-                    id="sleep_schedule"
-                    name="sleep_schedule"
-                    value={formData.sleep_schedule}
-                    onChange={handleChange}
-                  >
-                    <option value="early_bird">Early Bird</option>
-                    <option value="night_owl">Night Owl</option>
-                    <option value="flexible">Flexible</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="cleanliness_level">Cleanliness Level</label>
-                  <select
-                    id="cleanliness_level"
-                    name="cleanliness_level"
-                    value={formData.cleanliness_level}
-                    onChange={handleChange}
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="smoker"
-                    checked={formData.smoker}
-                    onChange={handleChange}
-                  />
-                  <span>I am a smoker</span>
-                </label>
-
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="pets"
-                    checked={formData.pets}
-                    onChange={handleChange}
-                  />
-                  <span>I have pets</span>
-                </label>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="lifestyle_notes">Additional Notes</label>
-                <textarea
-                  id="lifestyle_notes"
-                  name="lifestyle_notes"
-                  value={formData.lifestyle_notes}
-                  onChange={handleChange}
-                  rows="4"
-                  placeholder="Tell potential roommates about yourself, your hobbies, preferences, etc."
-                />
-              </div>
-            </div>
-
-            {/* Form Actions */}
-            <div className="form-actions">
-              {profile && (
-                <button
-                  type="button"
-                  className="cancel-button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    if (profile) {
-                      setFormData(mapProfileToForm(profile));
-                      setPhotoFile(null);
-                      setPhotoPreview('');
-                      setPhotoError(false);
-                    }
-                  }}
-                >
-                  <X size={20} />
-                  Cancel
-                </button>
-              )}
-              <button type="submit" className="save-button" disabled={saving}>
-                <Save size={20} />
-                {saving ? 'Saving...' : 'Save Profile'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          // Profile View (when not editing)
-          <div className="profile-view">
-            {/* Personal Information */}
-            <div className="view-section">
-              <h2>
-                <User size={24} />
-                Personal Information
-              </h2>
-              <div className="info-grid">
-                <div className="info-item">
-                  <label>Name</label>
-                  <p>{formData.first_name} {formData.last_name}</p>
-                </div>
-                <div className="info-item">
-                  <label>Email</label>
-                  <p>{user.email}</p>
-                </div>
-                {formData.phone_number && (
-                  <div className="info-item">
-                    <label>Phone</label>
-                    <p>{formData.phone_number}</p>
+              </form>
+            ) : (
+              // Profile View (when not editing)
+              <div className="profile-view">
+                {/* Personal Information */}
+                <div className="view-section">
+                  <h2>
+                    <User size={24} />
+                    Personal Information
+                  </h2>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Name</label>
+                      <p>{formData.first_name} {formData.last_name}</p>
+                    </div>
+                    <div className="info-item">
+                      <label>Email</label>
+                      <p>{user.email}</p>
+                    </div>
+                    {formData.phone_number && (
+                      <div className="info-item">
+                        <label>Phone</label>
+                        <p>{formData.phone_number}</p>
+                      </div>
+                    )}
+                    {user.user_type === 'KU_Student' && (
+                      <>
+                        {formData.departments && formData.departments.length > 0 && (
+                          <div className="info-item full-width">
+                            <label>Departments</label>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {formData.departments.map(dept => (
+                                <span key={dept.id} className="department-tag">
+                                  <GraduationCap size={12} />
+                                  {dept.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                )}
-                {user.user_type === 'KU_Student' && (
-                  <>
-                    {formData.departments && formData.departments.length > 0 && (
+                </div>
+
+                {/* Housing Preferences */}
+                <div className="view-section">
+                  <h2>
+                    <Home size={24} />
+                    Housing Preferences
+                  </h2>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Budget Range</label>
+                      <p>₺{formData.budget_min} - ₺{formData.budget_max} / month</p>
+                    </div>
+                    {formData.preferred_neighborhoods && formData.preferred_neighborhoods.length > 0 && (
                       <div className="info-item full-width">
-                        <label>Departments</label>
+                        <label>Preferred Neighborhoods</label>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {formData.departments.map(dept => (
-                            <span key={dept.id} className="department-tag">
-                              <GraduationCap size={12} />
-                              {dept.name}
+                          {Array.isArray(formData.preferred_neighborhoods) ? (
+                            formData.preferred_neighborhoods.map((n, i) => (
+                              <span key={i} className="location-tag">
+                                <MapPin size={12} />
+                                {n}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="location-tag">
+                              <MapPin size={12} />
+                              {formData.preferred_neighborhoods}
                             </span>
-                          ))}
+                          )}
                         </div>
                       </div>
                     )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Housing Preferences */}
-            <div className="view-section">
-              <h2>
-                <Home size={24} />
-                Housing Preferences
-              </h2>
-              <div className="info-grid">
-                <div className="info-item">
-                  <label>Budget Range</label>
-                  <p>₺{formData.budget_min} - ₺{formData.budget_max} / month</p>
+                    <div className="info-item">
+                      <label>Room Type</label>
+                      <p>{formData.room_type_preference === 'private' ? 'Private Room' :
+                        formData.room_type_preference === 'shared' ? 'Shared Room' : 'Entire Place'}</p>
+                    </div>
+                    {formData.move_in_date && (
+                      <div className="info-item">
+                        <label>Move-in Date</label>
+                        <p>{new Date(formData.move_in_date).toLocaleDateString()}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {formData.preferred_neighborhoods && formData.preferred_neighborhoods.length > 0 && (
-                  <div className="info-item full-width">
-                    <label>Preferred Neighborhoods</label>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {Array.isArray(formData.preferred_neighborhoods) ? (
-                        formData.preferred_neighborhoods.map((n, i) => (
-                          <span key={i} className="location-tag">
-                            <MapPin size={12} />
-                            {n}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="location-tag">
-                          <MapPin size={12} />
-                          {formData.preferred_neighborhoods}
-                        </span>
-                      )}
+
+                {/* Lifestyle Preferences */}
+                <div className="view-section">
+                  <h2>
+                    <Sparkles size={24} />
+                    Lifestyle Preferences
+                  </h2>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Sleep Schedule</label>
+                      <p>{formData.sleep_schedule === 'early_bird' ? 'Early Bird' :
+                        formData.sleep_schedule === 'night_owl' ? 'Night Owl' : 'Flexible'}</p>
+                    </div>
+                    <div className="info-item">
+                      <label>Cleanliness Level</label>
+                      <p>{formData.cleanliness_level.charAt(0).toUpperCase() + formData.cleanliness_level.slice(1)}</p>
+                    </div>
+                    <div className="info-item">
+                      <label>Smoker</label>
+                      <p>{formData.smoker ? 'Yes' : 'No'}</p>
+                    </div>
+                    <div className="info-item">
+                      <label>Pets</label>
+                      <p>{formData.pets ? 'Yes' : 'No'}</p>
                     </div>
                   </div>
-                )}
-                <div className="info-item">
-                  <label>Room Type</label>
-                  <p>{formData.room_type_preference === 'private' ? 'Private Room' :
-                    formData.room_type_preference === 'shared' ? 'Shared Room' : 'Entire Place'}</p>
+                  {formData.lifestyle_notes && (
+                    <div className="info-item full-width">
+                      <label>Additional Notes</label>
+                      <p>{formData.lifestyle_notes}</p>
+                    </div>
+                  )}
                 </div>
-                {formData.move_in_date && (
-                  <div className="info-item">
-                    <label>Move-in Date</label>
-                    <p>{new Date(formData.move_in_date).toLocaleDateString()}</p>
-                  </div>
-                )}
               </div>
-            </div>
+            )}
+          </>
+        )}
 
-            {/* Lifestyle Preferences */}
-            <div className="view-section">
-              <h2>
-                <Sparkles size={24} />
-                Lifestyle Preferences
-              </h2>
-              <div className="info-grid">
-                <div className="info-item">
-                  <label>Sleep Schedule</label>
-                  <p>{formData.sleep_schedule === 'early_bird' ? 'Early Bird' :
-                    formData.sleep_schedule === 'night_owl' ? 'Night Owl' : 'Flexible'}</p>
-                </div>
-                <div className="info-item">
-                  <label>Cleanliness Level</label>
-                  <p>{formData.cleanliness_level.charAt(0).toUpperCase() + formData.cleanliness_level.slice(1)}</p>
-                </div>
-                <div className="info-item">
-                  <label>Smoker</label>
-                  <p>{formData.smoker ? 'Yes' : 'No'}</p>
-                </div>
-                <div className="info-item">
-                  <label>Pets</label>
-                  <p>{formData.pets ? 'Yes' : 'No'}</p>
-                </div>
-              </div>
-              {formData.lifestyle_notes && (
-                <div className="info-item full-width">
-                  <label>Additional Notes</label>
-                  <p>{formData.lifestyle_notes}</p>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* My Listings Tab */}
+        {activeTab === 'listings' && (
+          <MyListingsTab />
+        )}
+
+        {/* Blocked Users Tab */}
+        {activeTab === 'blocked' && (
+          <BlockedUsersTab />
         )}
       </div>
-    </div >
+    </div>
   );
 }
 

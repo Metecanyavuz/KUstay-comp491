@@ -20,6 +20,7 @@ import { getCSRFToken } from '../../utils/csrf';
 import { resolveMediaUrl } from '../../utils/media';
 import './ListingDetail.css';
 import 'leaflet/dist/leaflet.css';
+import UserActionsMenu from '../Shared/UserActionsMenu';
 
 const DefaultIcon = L.icon({
   iconUrl: markerIcon,
@@ -415,6 +416,17 @@ function ListingDetail() {
               {deleting ? 'Deleting…' : 'Delete listing'}
             </button>
           )}
+          
+          {!isOwner && listing && user && (
+          <div style={{ marginLeft: 'auto' }}>
+            <UserActionsMenu 
+              userId={listing.user}
+              username={listing.user}
+              reportType="listing"
+              listingId={listing.listing_id}
+            />
+          </div>
+        )}
         </div>
 
         {loading ? (

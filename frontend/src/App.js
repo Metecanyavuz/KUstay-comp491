@@ -35,6 +35,7 @@ function App() {
             <Route path="/map" element={<MapView />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/reviews/:buildingName" element={<ReviewsBuilding />} />
+            
             <Route
               path="/listings/new"
               element={
@@ -70,7 +71,7 @@ function App() {
                 <PrivateRoute>
                   <Profile />
                 </PrivateRoute>
-             } 
+              } 
             />
             <Route 
               path="/profile/:userId" 
