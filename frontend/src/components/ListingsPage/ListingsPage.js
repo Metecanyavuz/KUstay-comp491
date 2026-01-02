@@ -402,10 +402,6 @@ function ListingsPage() {
         <div className="listings-hero-content">
           <p className="eyebrow">Discover KUstay Listings</p>
           <h1>Browse verified housing and find your next roommate</h1>
-          <p className="subtitle">
-            Filter by location, budget, or your must-have amenities. Every
-            listing is created by a KUstay community member.
-          </p>
           <form className="listings-hero-search" onSubmit={handleApplyFilters}>
             <div className="hero-search-input">
               <MapPin size={18} />
