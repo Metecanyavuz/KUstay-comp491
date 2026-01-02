@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mail, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { useI18n } from '../../context/I18nContext';
 import './ForgotPassword.css';
 
 function ForgotPassword() {
@@ -7,6 +8,7 @@ function ForgotPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { t } = useI18n();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,10 +29,10 @@ function ForgotPassword() {
       if (response.ok) {
         setSuccess(true);
       } else {
-        setError(data.error || 'Failed to send reset email');
+        setError(data.error || t('general.error', 'Something went wrong'));
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      setError(t('general.error', 'Something went wrong'));
     } finally {
       setLoading(false);
     }
@@ -42,14 +44,14 @@ function ForgotPassword() {
         <div className="auth-container">
           <div className="success-message">
             <CheckCircle size={64} color="#2f855a" />
-            <h2>Check Your Email</h2>
-            <p>We've sent password reset instructions to <strong>{email}</strong></p>
+            <h2>{t('auth.resetSentTitle', 'Check Your Email')}</h2>
+            <p>{t('auth.resetSentBody', "We've sent password reset instructions to")} <strong>{email}</strong></p>
             <p className="hint-text">
-              If you don't see the email, check your spam folder.
+              {t('auth.resetSpamHint', "If you don't see the email, check your spam folder.")}
             </p>
             <a href="/login" className="back-link">
               <ArrowLeft size={18} />
-              Back to Login
+              {t('auth.backToLogin', 'Back to Login')}
             </a>
           </div>
         </div>
@@ -64,8 +66,8 @@ function ForgotPassword() {
           <div className="auth-icon">
             <Mail size={32} />
           </div>
-          <h1>Forgot Password?</h1>
-          <p>Enter your email and we'll send you reset instructions</p>
+          <h1>{t('auth.forgotTitle', 'Reset password')}</h1>
+          <p>{t('auth.forgotSubtitle', "Enter your email and we'll send you reset instructions")}</p>
         </div>
 
         {error && (
@@ -77,7 +79,7 @@ function ForgotPassword() {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="email">{t('auth.email', 'Email')}</label>
             <div className="input-wrapper">
               <Mail className="input-icon" size={20} />
               <input
@@ -92,14 +94,14 @@ function ForgotPassword() {
           </div>
 
           <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? 'Sending...' : 'Send Reset Link'}
+            {loading ? t('general.loading', 'Loading...') : t('auth.forgotButton', 'Send reset link')}
           </button>
         </form>
 
         <div className="auth-switch">
           <a href="/login" className="back-link">
             <ArrowLeft size={18} />
-            Back to Login
+            {t('auth.backToLogin', 'Back to Login')}
           </a>
         </div>
       </div>

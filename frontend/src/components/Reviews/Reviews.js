@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getCSRFToken } from '../../utils/csrf';
 import { BUILDING_OPTIONS } from '../../data/buildings';
+import { useI18n } from '../../context/I18nContext';
 import './Reviews.css';
 
 function Reviews() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [buildingGroups, setBuildingGroups] = useState([]);
   const [buildingsLoading, setBuildingsLoading] = useState(true);
   const [buildingsError, setBuildingsError] = useState('');
@@ -30,7 +32,7 @@ function Reviews() {
     fetch('/api/block-reviews/buildings/', { credentials: 'include' })
       .then((response) => {
         if (!response.ok) {
-          throw new Error('Failed to load buildings');
+          throw new Error(t('reviews.loadBuildingsError', 'Failed to load buildings'));
         }
         return response.json();
       })
@@ -40,7 +42,7 @@ function Reviews() {
       })
       .catch((err) => {
         console.error(err);
-        setBuildingsError('Unable to load buildings right now.');
+        setBuildingsError(t('reviews.loadBuildingsError', 'Unable to load buildings right now.'));
         setBuildingsLoading(false);
       });
   }, []);
@@ -118,13 +120,13 @@ function Reviews() {
     const unitDetailsValue = unitDetails.trim();
 
     if (!blockName || !neighborhood) {
-      setReviewNotice('Please select a building and neighborhood.');
+      setReviewNotice(t('reviews.selectBuilding', 'Please select a building and neighborhood.'));
       return;
     }
 
     const ratingValues = Object.values(ratings);
     if (ratingValues.some((value) => !value)) {
-      setReviewNotice('Please rate all categories.');
+      setReviewNotice(t('reviews.rateAll', 'Please rate all categories.'));
       return;
     }
 
@@ -158,11 +160,11 @@ function Reviews() {
           data.error ||
           data.detail ||
           (firstKey && Array.isArray(data[firstKey]) ? data[firstKey][0] : null) ||
-          'Unable to submit review.';
+          t('reviews.submitError', 'Unable to submit review.');
         throw new Error(fallback);
       }
 
-      setReviewNotice('Thanks! Your review is pending approval.');
+      setReviewNotice(t('reviews.thanks', 'Thanks! Your review is pending approval.'));
       setSelectedBuilding('');
       setSelectedNeighborhood('');
       setCustomBuilding('');
@@ -177,7 +179,7 @@ function Reviews() {
       setComment('');
     } catch (err) {
       console.error(err);
-      setReviewNotice(err.message || 'Unable to submit review.');
+      setReviewNotice(err.message || t('reviews.submitError', 'Unable to submit review.'));
     } finally {
       setReviewSubmitting(false);
     }
@@ -206,10 +208,9 @@ function Reviews() {
   return (
     <div className="reviews-page">
       <div className="reviews-hero">
-        <h1>Reviews</h1>
+        <h1>{t('reviews.title', 'Reviews')}</h1>
         <p>
-          Student feedback on living conditions in popular KU housing areas.
-          Only approved reviews appear publicly.
+          {t('reviews.subtitle', 'Student feedback on living conditions in popular KU housing areas. Only approved reviews appear publicly.')}
         </p>
       </div>
 
@@ -217,13 +218,13 @@ function Reviews() {
         <div className="reviews-content">
           <div className="reviews-header">
             <div>
-              <h2>Browse by building</h2>
-              <span className="block-review-muted">All buildings with approved reviews</span>
+              <h2>{t('reviews.browse', 'Browse by building')}</h2>
+              <span className="block-review-muted">{t('reviews.browseHint', 'All buildings with approved reviews')}</span>
             </div>
           </div>
 
           {buildingsLoading ? (
-            <div className="loading">Loading buildings...</div>
+            <div className="loading">{t('reviews.loading', 'Loading buildings...')}</div>
           ) : buildingsError ? (
             <div className="block-review-muted">{buildingsError}</div>
           ) : buildingGroups.length ? (
@@ -251,7 +252,7 @@ function Reviews() {
                     {building.latest_comment ? (
                       <p className="block-review-comment">"{building.latest_comment}"</p>
                     ) : (
-                      <p className="block-review-muted">No comments yet.</p>
+                      <p className="block-review-muted">{t('reviews.noComments', 'No comments yet.')}</p>
                     )}
                     {building.latest_unit_details && (
                       <p className="block-review-unit">
@@ -259,117 +260,117 @@ function Reviews() {
                       </p>
                     )}
                     <div className="block-review-meta">
-                      <span>{building.review_count} review{building.review_count === 1 ? '' : 's'}</span>
+                      <span>{building.review_count} {building.review_count === 1 ? t('reviews.review', 'review') : t('reviews.reviews', 'reviews')}</span>
                       <span>{formatReviewDate(building.latest_created_at)}</span>
                     </div>
                     <Link
                       className="review-detail-link"
                       to={buildReviewLink(building.block_name, building.neighborhood)}
                     >
-                      View building reviews
+                      {t('reviews.viewBuilding', 'View building reviews')}
                     </Link>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="block-review-muted">No building reviews yet.</div>
+            <div className="block-review-muted">{t('reviews.none', 'No building reviews yet.')}</div>
           )}
         </div>
 
         <div className="block-review-form-card">
-          <h3>Share your experience</h3>
+          <h3>{t('reviews.share', 'Share your experience')}</h3>
           <p className="block-review-muted">
-            Help other KU students choose better housing. Comments are optional.
+            {t('reviews.shareDesc', 'Help other KU students choose better housing. Comments are optional.')}
           </p>
 
           {user ? (
             <form onSubmit={handleReviewSubmit} className="block-review-form">
               <label>
-                Building
+                {t('reviews.building', 'Building')}
                 <select value={selectedBuilding} onChange={handleBuildingChange}>
-                  <option value="">Select a building</option>
+                  <option value="">{t('reviews.selectBuildingOption', 'Select a building')}</option>
                   {BUILDING_OPTIONS.map((item) => (
                     <option key={item.name} value={item.name}>
                       {item.name}
                     </option>
                   ))}
-                  <option value="other">Other (type manually)</option>
+                  <option value="other">{t('reviews.otherBuilding', 'Other (type manually)')}</option>
                 </select>
               </label>
 
               {selectedBuilding === 'other' ? (
                 <>
                   <label>
-                    Building name
+                    {t('reviews.buildingName', 'Building name')}
                     <input
                       type="text"
                       value={customBuilding}
                       onChange={(event) => setCustomBuilding(event.target.value)}
-                      placeholder="Example: Panorama Suites"
+                      placeholder={t('reviews.buildingPlaceholder', 'Example: Panorama Suites')}
                     />
                   </label>
                   <label>
-                    Neighborhood
+                    {t('reviews.neighborhood', 'Neighborhood')}
                     <input
                       type="text"
                       value={customNeighborhood}
                       onChange={(event) => setCustomNeighborhood(event.target.value)}
-                      placeholder="Example: Zekeriyakoy"
+                      placeholder={t('reviews.neighborhoodPlaceholder', 'Example: Zekeriyakoy')}
                     />
                   </label>
                 </>
               ) : (
                 <label>
-                  Neighborhood
+                  {t('reviews.neighborhood', 'Neighborhood')}
                   <input
                     type="text"
                     value={selectedNeighborhood}
-                    placeholder="Select a building first"
+                    placeholder={t('reviews.selectBuildingFirst', 'Select a building first')}
                     readOnly
                   />
                 </label>
                 )}
 
               <label>
-                Block / apartment (optional)
+                {t('reviews.unit', 'Block / apartment (optional)')}
                 <input
                   type="text"
                   value={unitDetails}
                   onChange={(event) => setUnitDetails(event.target.value)}
-                  placeholder="Example: B Block, Apt 55"
+                  placeholder={t('reviews.unitPlaceholder', 'Example: B Block, Apt 55')}
                 />
               </label>
 
-              {renderRatingPicker('Noise', ratings.noise, (value) =>
+              {renderRatingPicker(t('reviews.noise', 'Noise'), ratings.noise, (value) =>
                 handleRatingChange('noise', value))}
-              {renderRatingPicker('Management', ratings.management, (value) =>
+              {renderRatingPicker(t('reviews.management', 'Management'), ratings.management, (value) =>
                 handleRatingChange('management', value))}
-              {renderRatingPicker('Safety', ratings.safety, (value) =>
+              {renderRatingPicker(t('reviews.safety', 'Safety'), ratings.safety, (value) =>
                 handleRatingChange('safety', value))}
-              {renderRatingPicker('Transport', ratings.transport, (value) =>
+              {renderRatingPicker(t('reviews.transport', 'Transport'), ratings.transport, (value) =>
                 handleRatingChange('transport', value))}
 
               <label>
-                Comment (optional)
+                {t('reviews.comment', 'Comment (optional)')}
                 <textarea
                   rows={3}
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
-                  placeholder="Share your experience. If you want, you can mention apartment details."
+                  placeholder={t('reviews.commentPlaceholder', 'Share your experience. If you want, you can mention apartment details.')}
                 />
               </label>
 
               <button type="submit" className="block-review-submit" disabled={reviewSubmitting}>
-                {reviewSubmitting ? 'Submitting...' : 'Submit review'}
+                {reviewSubmitting ? t('reviews.submitting', 'Submitting...') : t('reviews.submit', 'Submit review')}
               </button>
               {reviewNotice && <div className="block-review-muted">{reviewNotice}</div>}
             </form>
           ) : (
             <div className="block-review-login">
-              <p className="block-review-muted">Log in to leave a review.</p>
+              <p className="block-review-muted">{t('reviews.loginPrompt', 'Log in to leave a review.')}</p>
               <a href="/login" className="block-review-submit">
-                Go to login
+                {t('auth.loginButton', 'Login')}
               </a>
             </div>
           )}

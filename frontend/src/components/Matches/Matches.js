@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import './Matches.css';
 import { getCSRFToken } from '../../utils/csrf';
+import { useI18n } from '../../context/I18nContext';
 
 function MatchAvatar({ user }) {
   const [imageError, setImageError] = useState(false);
@@ -44,12 +45,12 @@ function MatchAvatar({ user }) {
 }
 
 const CRITERIA_CONFIG = [
-  { key: 'budget', label: 'Budget Overlap', icon: DollarSign },
-  { key: 'sleep_schedule', label: 'Sleep Schedule', icon: Moon },
-  { key: 'cleanliness', label: 'Cleanliness Expectations', icon: Sparkles },
-  { key: 'location', label: 'Preferred Neighborhoods', icon: MapPin },
-  { key: 'room_type', label: 'Room Type Preference', icon: Home },
-  { key: 'lifestyle', label: 'Lifestyle Fit (Smoking/Pets)', icon: Users },
+  { key: 'budget', label: 'matches.criteria.budget', icon: DollarSign },
+  { key: 'sleep_schedule', label: 'matches.criteria.sleep', icon: Moon },
+  { key: 'cleanliness', label: 'matches.criteria.cleanliness', icon: Sparkles },
+  { key: 'location', label: 'matches.criteria.location', icon: MapPin },
+  { key: 'room_type', label: 'matches.criteria.room', icon: Home },
+  { key: 'lifestyle', label: 'matches.criteria.lifestyle', icon: Users },
 ];
 
 const normalizeScore = (value) => {
@@ -98,6 +99,7 @@ const getCommonCriteria = (matchingCriteria) => {
 function Matches() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -120,10 +122,10 @@ function Matches() {
         setMatches(data.results || []);
       } else {
         const errorData = await response.json();
-        setError(errorData.detail || 'Failed to load matches');
+        setError(errorData.detail || t('matches.loadError', 'Failed to load matches'));
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      setError(t('general.error', 'Something went wrong.'));
       console.error('Fetch matches error:', err);
     } finally {
       setLoading(false);
@@ -137,9 +139,9 @@ function Matches() {
   };
 
   const getScoreLabel = (score) => {
-    if (score >= 80) return 'Excellent Match';
-    if (score >= 60) return 'Good Match';
-    return 'Potential Match';
+    if (score >= 80) return t('matches.scoreExcellent', 'Excellent Match');
+    if (score >= 60) return t('matches.scoreGood', 'Good Match');
+    return t('matches.scorePotential', 'Potential Match');
   };
 
   const filteredMatches = matches.filter((match) => {
@@ -184,8 +186,8 @@ function Matches() {
       <div className="matches-page">
         <div className="error-container">
           <AlertCircle size={48} />
-          <h2>Please login to view matches</h2>
-          <a href="/login" className="primary-button">Login</a>
+          <h2>{t('matches.loginPrompt', 'Please login to view matches')}</h2>
+          <a href="/login" className="primary-button">{t('auth.loginButton', 'Login')}</a>
         </div>
       </div>
     );
@@ -196,7 +198,7 @@ function Matches() {
       <div className="matches-page">
         <div className="loading-container">
           <Loader className="spinner" size={48} />
-          <p>Finding your perfect matches...</p>
+          <p>{t('matches.loading', 'Finding your perfect matches...')}</p>
         </div>
       </div>
     );
@@ -210,8 +212,8 @@ function Matches() {
           <h2>{error}</h2>
           {error.toLowerCase().includes('profile') && (
             <>
-              <p>Complete your profile to see compatible roommates</p>
-              <a href="/profile" className="primary-button">Complete Profile</a>
+              <p>{t('matches.completeProfile', 'Complete your profile to see compatible roommates')}</p>
+              <a href="/profile" className="primary-button">{t('matches.completeProfileCta', 'Complete Profile')}</a>
             </>
           )}
         </div>
@@ -229,8 +231,8 @@ function Matches() {
               <Heart size={32} />
             </div>
             <div className="header-text">
-              <h1>Your Matches</h1>
-              <p>Found {matches.length} compatible roommates based on your preferences</p>
+              <h1>{t('matches.title', 'Your Matches')}</h1>
+              <p>{t('matches.found', 'Found')} {matches.length} {t('matches.foundSuffix', 'compatible roommates based on your preferences')}</p>
             </div>
           </div>
 
@@ -240,19 +242,19 @@ function Matches() {
               className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
               onClick={() => setFilter('all')}
             >
-              All Matches ({matches.length})
+              {t('matches.filterAll', 'All Matches')} ({matches.length})
             </button>
             <button
               className={`filter-btn ${filter === 'high' ? 'active' : ''}`}
               onClick={() => setFilter('high')}
             >
-              Excellent (80%+)
+              {t('matches.filterHigh', 'Excellent (80%+)')}
             </button>
             <button
               className={`filter-btn ${filter === 'medium' ? 'active' : ''}`}
               onClick={() => setFilter('medium')}
             >
-              Good (60-79%)
+              {t('matches.filterMedium', 'Good (60-79%)')}
             </button>
           </div>
         </div>
@@ -261,9 +263,9 @@ function Matches() {
         {filteredMatches.length === 0 ? (
           <div className="no-matches">
             <Users size={64} />
-            <h2>No matches found</h2>
-            <p>Try adjusting your preferences or check back later</p>
-            <a href="/profile" className="secondary-button">Update Preferences</a>
+            <h2>{t('matches.none', 'No matches found')}</h2>
+            <p>{t('matches.tryAdjust', 'Try adjusting your preferences or check back later')}</p>
+            <a href="/profile" className="secondary-button">{t('matches.updatePrefs', 'Update Preferences')}</a>
           </div>
         ) : (
           /* Matches Grid */
@@ -288,7 +290,7 @@ function Matches() {
                     <p className="match-department">
                       {match.user.department && match.user.faculty 
                         ? `${match.user.department}, ${match.user.faculty}`
-                        : match.user.department || match.user.faculty || 'Student'}
+                        : match.user.department || match.user.faculty || t('matches.student', 'Student')}
                     </p>
                   </div>
                 </div>
@@ -297,7 +299,7 @@ function Matches() {
                 <div className="match-criteria">
                   <h4>
                     <Sparkles size={16} />
-                    What You Have in Common
+                    {t('matches.common', 'What You Have in Common')}
                   </h4>
                   <div className="criteria-list">
                     {commonCriteria.length > 0 ? (
@@ -307,7 +309,7 @@ function Matches() {
                           <div className="criterion" key={item.key}>
                             <Icon size={16} />
                             <div className="criterion-text">
-                              <span className="criterion-title">{item.label}</span>
+                              <span className="criterion-title">{t(item.label, item.label)}</span>
                               {item.reason && (
                                 <p className="criterion-reason">{item.reason}</p>
                               )}
@@ -318,7 +320,7 @@ function Matches() {
                     ) : (
                       <div className="criterion empty-criteria">
                         <AlertCircle size={16} />
-                        <span>We need more profile info to show common ground.</span>
+                        <span>{t('matches.needMoreProfile', 'We need more profile info to show common ground.')}</span>
                       </div>
                     )}
                   </div>
@@ -331,10 +333,10 @@ function Matches() {
                     onClick={() => startConversation(match.user.id)}
                   >
                     <MessageCircle size={18} />
-                    <span>Send Message</span>
+                    <span>{t('matches.sendMessage', 'Send Message')}</span>
                   </button>
                   <a href={`/profile/${match.user.id}`} className="view-profile-button">
-                    View Profile
+                    {t('matches.viewProfile', 'View Profile')}
                   </a>
                 </div>
               </div>
@@ -349,11 +351,9 @@ function Matches() {
             <Heart size={24} />
           </div>
           <div className="info-content">
-            <h3>How Matching Works</h3>
+            <h3>{t('matches.howTitle', 'How Matching Works')}</h3>
             <p>
-              We calculate compatibility based on your preferences including budget, 
-              sleep schedule, cleanliness level, preferred neighborhoods, room type, and lifestyle fit. 
-              Higher scores mean better compatibility!
+              {t('matches.howDesc', 'We calculate compatibility based on your preferences including budget, sleep schedule, cleanliness level, preferred neighborhoods, room type, and lifestyle fit. Higher scores mean better compatibility!')}
             </p>
           </div>
         </div>

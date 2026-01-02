@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { UserPlus, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useI18n } from '../../context/I18nContext';
 import './Signup.css';
 
 function Signup() {
@@ -17,6 +18,7 @@ function Signup() {
   const [loading, setLoading] = useState(false);
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (user && !success) {
@@ -38,13 +40,13 @@ function Signup() {
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordMismatch', 'Passwords do not match'));
       setLoading(false);
       return;
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('auth.passwordTooShort', 'Password must be at least 8 characters'));
       setLoading(false);
       return;
     }
@@ -83,10 +85,10 @@ function Signup() {
           }, 2000);
         }
       } else {
-        setError(data.error || 'Registration failed. Please try again.');
+        setError(data.error || t('general.error', 'Something went wrong'));
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      setError(t('general.error', 'Something went wrong'));
     } finally {
       setLoading(false);
     }
@@ -122,8 +124,8 @@ function Signup() {
           <div className="auth-icon">
             <UserPlus size={32} />
           </div>
-          <h1>Create Account</h1>
-          <p>Join KUstay and find your perfect roommate</p>
+          <h1>{t('auth.signupTitle', 'Create your account')}</h1>
+          <p>{t('auth.signupSubtitle', 'Join KUstay and find your perfect roommate')}</p>
         </div>
 
         {error && (
@@ -135,7 +137,7 @@ function Signup() {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="email">{t('auth.email', 'Email')}</label>
             <div className="input-wrapper">
               <Mail className="input-icon" size={20} />
               <input
@@ -151,7 +153,7 @@ function Signup() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="username">{t('auth.username', 'Username')}</label>
             <div className="input-wrapper">
               <User className="input-icon" size={20} />
               <input
@@ -167,7 +169,7 @@ function Signup() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="userType">I am a</label>
+            <label htmlFor="userType">{t('auth.userType', 'I am a')}</label>
             <select
               id="userType"
               name="userType"
@@ -175,13 +177,13 @@ function Signup() {
               onChange={handleChange}
               className="select-input"
             >
-              <option value="KU_Student">KU Student</option>
-              <option value="External_Student">External Student</option>
+              <option value="KU_Student">{t('auth.kuStudent', 'KU Student')}</option>
+              <option value="External_Student">{t('auth.externalStudent', 'External Student')}</option>
             </select>
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t('auth.password', 'Password')}</label>
             <div className="input-wrapper">
               <Lock className="input-icon" size={20} />
               <input
@@ -194,11 +196,11 @@ function Signup() {
                 required
               />
             </div>
-            <small className="hint">Must be at least 8 characters</small>
+            <small className="hint">{t('auth.passwordHint', 'Must be at least 8 characters')}</small>
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+            <label htmlFor="confirmPassword">{t('auth.confirmPassword', 'Confirm Password')}</label>
             <div className="input-wrapper">
               <Lock className="input-icon" size={20} />
               <input
@@ -214,13 +216,13 @@ function Signup() {
           </div>
 
           <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? 'Creating account...' : 'Sign Up'}
+            {loading ? t('general.loading', 'Loading...') : t('auth.signupButton', 'Sign up')}
           </button>
         </form>
 
         <div className="auth-switch">
-          Already have an account?{' '}
-          <a href="/login">Login</a>
+          {t('auth.haveAccount', 'Already have an account?')}{' '}
+          <a href="/login">{t('auth.loginButton', 'Login')}</a>
         </div>
       </div>
     </div>

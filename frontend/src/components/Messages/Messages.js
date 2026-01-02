@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import './Messages.css';
 import { getCSRFToken } from '../../utils/csrf';
+import { useI18n } from '../../context/I18nContext';
 
 function PartnerAvatar({ partner, size = 40 }) {
   const [error, setError] = useState(false);
@@ -36,6 +37,7 @@ function PartnerAvatar({ partner, size = 40 }) {
 
 function Messages() {
   const location = useLocation();
+  const { t } = useI18n();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -78,7 +80,7 @@ function Messages() {
         credentials: 'include',
       });
       if (!response.ok) {
-        throw new Error('Failed to load conversations');
+        throw new Error(t('messages.loadConversationsError', 'Failed to load conversations'));
       }
       const data = await response.json();
       setConversations(data);
@@ -114,7 +116,7 @@ function Messages() {
     setSelectedConversation(conversation);
     setShowMediaPanel(false);
     setIsBlocked(!!conversation.is_blocked);
-    setBlockMessage(conversation.is_blocked ? 'You blocked this user. Messaging is disabled.' : '');
+    setBlockMessage(conversation.is_blocked ? t('messages.blocked', 'You blocked this user. Messaging is disabled.') : '');
     setAttachment(null);
     if (attachmentPreview) {
       URL.revokeObjectURL(attachmentPreview);
@@ -134,7 +136,7 @@ function Messages() {
         credentials: 'include',
       });
       if (!response.ok) {
-        throw new Error('Failed to load messages');
+        throw new Error(t('messages.loadMessagesError', 'Failed to load messages'));
       }
       const data = await response.json();
       setMessages(data);
@@ -142,7 +144,7 @@ function Messages() {
       const convoMeta = conversations.find((c) => c.conversation_id === conversationId);
       if (convoMeta?.is_blocked) {
         setIsBlocked(true);
-        setBlockMessage('You blocked this user. Messaging is disabled.');
+        setBlockMessage(t('messages.blocked', 'You blocked this user. Messaging is disabled.'));
       }
     } catch (err) {
       setError(err.message);
@@ -282,11 +284,11 @@ function Messages() {
   return (
     <div className="messages-page">
       <div className="conversation-list">
-        <h2>Conversations</h2>
+        <h2>{t('messages.title', 'Messages')}</h2>
         {loadingConversations ? (
-          <p>Loading...</p>
+          <p>{t('general.loading', 'Loading...')}</p>
         ) : conversations.length === 0 ? (
-          <p>No conversations yet.</p>
+          <p>{t('messages.emptyList', 'No conversations yet.')}</p>
         ) : (
           <ul>
             {conversations.map((convo) => (
@@ -311,12 +313,12 @@ function Messages() {
                       <p className="preview">
                         {convo.last_message.has_attachment
                           ? convo.last_message.attachment_type === 'image'
-                            ? '[Image]'
-                            : '[File]'
-                          : convo.last_message.message_text || 'New message'}
+                            ? t('messages.image', '[Image]')
+                            : t('messages.file', '[File]')
+                          : convo.last_message.message_text || t('messages.new', 'New message')}
                       </p>
                     ) : (
-                      <p className="preview muted">No messages yet</p>
+                      <p className="preview muted">{t('messages.noneYet', 'No messages yet')}</p>
                     )}
                   </div>
                 </div>
@@ -352,14 +354,14 @@ function Messages() {
                 className="shared-media-button"
                 onClick={() => setShowMediaPanel((prev) => !prev)}
               >
-                Shared Media ({mediaMessages.length})
+                {t('messages.sharedMedia', 'Shared Media')} ({mediaMessages.length})
               </button>
             </div>
 
             {showMediaPanel && (
               <div className="shared-media-panel">
                 {mediaMessages.length === 0 ? (
-                  <p className="muted">No shared files yet.</p>
+                  <p className="muted">{t('messages.noShared', 'No shared files yet.')}</p>
                 ) : (
                   <>
                     <div className="media-grid">
@@ -388,7 +390,7 @@ function Messages() {
                             rel="noreferrer"
                             className="media-file-link"
                           >
-                            {msg.attachment_name || 'Download file'}
+                            {msg.attachment_name || t('messages.download', 'Download file')}
                           </a>
                         ))}
                     </div>
@@ -399,15 +401,15 @@ function Messages() {
 
             {isBlocked && (
               <div className="block-banner">
-                <p>{blockMessage || 'Messaging is disabled because one of you has blocked the other.'}</p>
+                <p>{blockMessage || t('messages.blockedInfo', 'Messaging is disabled because one of you has blocked the other.')}</p>
               </div>
             )}
 
             <div className="messages-list" ref={messagesListRef}>
               {loadingMessages ? (
-                <p>Loading messages...</p>
+                <p>{t('messages.loading', 'Loading messages...')}</p>
               ) : messages.length === 0 ? (
-                <p className="muted">Say hello to start the conversation.</p>
+                <p className="muted">{t('messages.empty', 'Say hello to start the conversation.')}</p>
               ) : (
                 messages.map((msg) => (
                   <div
@@ -424,7 +426,7 @@ function Messages() {
                             <img src={msg.attachment_url} alt={msg.attachment_name || 'Attachment'} />
                           ) : (
                             <a href={msg.attachment_url} target="_blank" rel="noreferrer">
-                              {msg.attachment_name || 'Download file'}
+                              {msg.attachment_name || t('messages.download', 'Download file')}
                             </a>
                           )}
                         </div>
@@ -467,7 +469,7 @@ function Messages() {
               </div>
               <textarea
                 rows={2}
-                placeholder="Type your message..."
+                placeholder={t('messages.newMessage', 'Type a message...')}
                 value={newMessage}
                 onChange={(e) => handleDraftChange(e.target.value)}
                 disabled={isBlocked}
@@ -476,14 +478,14 @@ function Messages() {
                 onClick={handleSendMessage}
                 disabled={isBlocked || (!newMessage.trim() && !attachment)}
               >
-                Send
+                {t('messages.send', 'Send')}
               </button>
             </div>
           </>
         ) : (
           <div className="empty-state">
-            <h3>Select a conversation</h3>
-            <p>Choose someone from the list to start chatting.</p>
+            <h3>{t('messages.selectConversation', 'Select a conversation')}</h3>
+            <p>{t('messages.selectConversationDesc', 'Choose someone from the list to start chatting.')}</p>
           </div>
         )}
       </div>

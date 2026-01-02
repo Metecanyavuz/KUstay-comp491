@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import './MapView.css';
 import 'leaflet/dist/leaflet.css';
+import { useI18n } from '../../context/I18nContext';
 
 // Modern dot-based marker icons
 const listingIcon = L.divIcon({
@@ -48,6 +49,7 @@ const haversineKm = (a, b) => {
 };
 
 function MapView() {
+  const { t } = useI18n();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -79,12 +81,12 @@ function MapView() {
     try {
       const res = await fetch('/api/listings/', { credentials: 'include' });
       if (!res.ok) {
-        throw new Error('Failed to load listings');
+        throw new Error(t('map.loadError', 'Failed to load listings'));
       }
       const data = await res.json();
       setListings(data || []);
     } catch (err) {
-      setError(err.message || 'Unable to load listings.');
+      setError(err.message || t('map.loadError', 'Unable to load listings.'));
     } finally {
       setLoading(false);
     }
@@ -117,9 +119,9 @@ function MapView() {
       <div className="map-toolbar">
         <div className="toolbar-left">
           <h1>
-            <MapPin size={20} /> Map View
+            <MapPin size={20} /> {t('map.title', 'Map View')}
           </h1>
-          <p>See active listings on the map and filter by distance.</p>
+          <p>{t('map.subtitle', 'See active listings on the map and filter by distance.')}</p>
         </div>
         <div className="toolbar-right">
           <label className="toggle">
@@ -128,7 +130,7 @@ function MapView() {
               checked={onlyNearby}
               onChange={(e) => setOnlyNearby(e.target.checked)}
             />
-            <span>Only nearby</span>
+            <span>{t('map.onlyNearby', 'Only nearby')}</span>
           </label>
           <div className="radius-control">
             <span>{radiusKm} km</span>
@@ -146,10 +148,14 @@ function MapView() {
             className="geo-btn"
             onClick={flyToUser}
             disabled={!userCoords}
-            title={userCoords ? 'Go to my location' : 'Enable location to center'}
+            title={
+              userCoords
+                ? t('map.toMyLocation', 'Go to my location')
+                : t('map.enableLocation', 'Enable location to center')
+            }
           >
             <LocateFixed size={18} />
-            <span>My Location</span>
+            <span>{t('map.myLocation', 'My Location')}</span>
           </button>
         </div>
       </div>
@@ -157,7 +163,7 @@ function MapView() {
       {loading ? (
         <div className="map-loading">
           <Loader className="spin" size={32} />
-          <p>Loading listings on the map...</p>
+          <p>{t('map.loading', 'Loading listings on the map...')}</p>
         </div>
       ) : error ? (
         <div className="map-error">
@@ -220,9 +226,11 @@ function MapView() {
           </div>
 
           <div className="map-sidebar">
-            <h2>Listings {onlyNearby && userCoords ? `(within ${radiusKm} km)` : ''}</h2>
+            <h2>
+              {t('map.listings', 'Listings')} {onlyNearby && userCoords ? `(${t('map.within', 'within')} ${radiusKm} km)` : ''}
+            </h2>
             {filteredListings.length === 0 ? (
-              <p className="muted">No listings match this filter.</p>
+              <p className="muted">{t('map.noResults', 'No listings match this filter.')}</p>
             ) : (
               <ul className="listing-list">
                 {filteredListings.map((listing) => {

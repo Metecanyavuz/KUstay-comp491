@@ -18,6 +18,7 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { useAuth } from '../../context/AuthContext';
 import { getCSRFToken } from '../../utils/csrf';
 import { resolveMediaUrl } from '../../utils/media';
+import { useI18n } from '../../context/I18nContext';
 import './ListingDetail.css';
 import 'leaflet/dist/leaflet.css';
 import UserActionsMenu from '../Shared/UserActionsMenu';
@@ -33,18 +34,6 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const LISTING_TYPE_LABELS = {
-  apartment: 'Apartment',
-  house: 'House',
-  room: 'Room',
-};
-
-const ROOM_TYPE_LABELS = {
-  private: 'Private Room',
-  shared: 'Shared Room',
-  entire_place: 'Entire Place',
-};
-
 const formatPrice = (value) => {
   if (value === null || value === undefined || value === '') {
     return '—';
@@ -58,13 +47,13 @@ const formatPrice = (value) => {
   return `${numericValue.toLocaleString('tr-TR')} ₺/month`;
 };
 
-const formatDate = (value) => {
+const formatDate = (value, locale = 'en-US', fallback = 'Flexible move-in') => {
   if (!value) {
-    return 'Flexible move-in';
+    return fallback;
   }
 
   try {
-    return new Date(value).toLocaleDateString('en-US', {
+    return new Date(value).toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
     });
@@ -73,13 +62,13 @@ const formatDate = (value) => {
   }
 };
 
-const formatReviewDate = (value) => {
+const formatReviewDate = (value, locale = 'en-US') => {
   if (!value) {
     return '';
   }
 
   try {
-    return new Date(value).toLocaleDateString('en-US', {
+    return new Date(value).toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -113,11 +102,28 @@ function ListingDetail() {
   const { listingId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useI18n();
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const listingTypeLabels = useMemo(
+    () => ({
+      apartment: t('listings.apartment', 'Apartment'),
+      house: t('listings.house', 'House'),
+      room: t('listings.room', 'Room'),
+    }),
+    [t],
+  );
+  const roomTypeLabels = useMemo(
+    () => ({
+      private: t('listings.privateRoom', 'Private Room'),
+      shared: t('listings.sharedRoom', 'Shared Room'),
+      entire_place: t('listings.entirePlace', 'Entire Place'),
+    }),
+    [t],
+  );
   const [deleteError, setDeleteError] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [reviews, setReviews] = useState([]);
@@ -460,7 +466,7 @@ function ListingDetail() {
                   </div>
                 )}
                 <span className="type-pill">
-                  {LISTING_TYPE_LABELS[listing.listing_type] ||
+                  {listingTypeLabels[listing.listing_type] ||
                     listing.listing_type}
                 </span>
               </div>
@@ -530,7 +536,7 @@ function ListingDetail() {
                     <div>
                       <p className="label">Listing type</p>
                       <p>
-                        {LISTING_TYPE_LABELS[listing.listing_type] ||
+                        {listingTypeLabels[listing.listing_type] ||
                           listing.listing_type}
                       </p>
                     </div>
@@ -539,7 +545,7 @@ function ListingDetail() {
                     <BedDouble size={18} />
                     <div>
                       <p className="label">Room type</p>
-                      <p>{ROOM_TYPE_LABELS[listing.room_type] || 'N/A'}</p>
+                      <p>{roomTypeLabels[listing.room_type] || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="fact">
