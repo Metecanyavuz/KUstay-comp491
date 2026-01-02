@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { I18nProvider } from './context/I18nContext';
 import Navigation from './components/Navigation/Navigation';
 import HomePage from './components/HomePage/HomePage';
 import ListingsPage from './components/ListingsPage/ListingsPage';
@@ -24,79 +25,81 @@ import './App.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="App">
-          <Navigation />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/listings" element={<ListingsPage />} />
-            <Route path="/listings/:listingId" element={<ListingDetail />} />
-            <Route path="/map" element={<MapView />} />
-            <Route path="/reviews" element={<Reviews />} />
-            <Route path="/reviews/:buildingName" element={<ReviewsBuilding />} />
-            
-            <Route
-              path="/listings/new"
-              element={
-                <PrivateRoute>
-                  <CreateListing />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/listings/:listingId/edit"
-              element={
-                <PrivateRoute>
-                  <EditListing />
-                </PrivateRoute>
-              }
-            />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route 
-              path="/matches" 
-              element={
-                <PrivateRoute>
-                  <Matches />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/profile" 
-              element={
-                <PrivateRoute>
-                  <Profile />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/profile/:userId" 
-              element={<UserProfile />} 
-            />
-            <Route
-              path="/conversations"
-              element={
-                <PrivateRoute>
-                  <Messages />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/blocked-users"
-              element={
-                <PrivateRoute>
-                  <BlockedUsersList />
-                </PrivateRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <Router>
+          <div className="App">
+            <Navigation />
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/listings" element={<ListingsPage />} />
+              <Route path="/listings/:listingId" element={<ListingDetail />} />
+              <Route path="/map" element={<MapView />} />
+              <Route path="/reviews" element={<Reviews />} />
+              <Route path="/reviews/:buildingName" element={<ReviewsBuilding />} />
+              
+              <Route
+                path="/listings/new"
+                element={
+                  <PrivateRoute>
+                    <CreateListing />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/listings/:listingId/edit"
+                element={
+                  <PrivateRoute>
+                    <EditListing />
+                  </PrivateRoute>
+                }
+              />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route 
+                path="/matches" 
+                element={
+                  <PrivateRoute>
+                    <Matches />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <PrivateRoute>
+                    <Profile />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/profile/:userId" 
+                element={<UserProfile />} 
+              />
+              <Route
+                path="/conversations"
+                element={
+                  <PrivateRoute>
+                    <Messages />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/blocked-users"
+                element={
+                  <PrivateRoute>
+                    <BlockedUsersList />
+                  </PrivateRoute>
+                }
+              />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </I18nProvider>
   );
 }
 

@@ -13,19 +13,8 @@ import {
 } from 'lucide-react';
 import { AMENITY_OPTIONS } from '../../data/amenities';
 import { resolveMediaUrl } from '../../utils/media';
+import { useI18n } from '../../context/I18nContext';
 import './ListingsPage.css';
-
-const LISTING_TYPE_LABELS = {
-  apartment: 'Apartment',
-  house: 'House',
-  room: 'Room',
-};
-
-const ROOM_TYPE_LABELS = {
-  private: 'Private Room',
-  shared: 'Shared Room',
-  entire_place: 'Entire Place',
-};
 
 const createDefaultFilters = () => ({
   location: '',
@@ -105,21 +94,6 @@ const safeTimestamp = (value) => {
   return Number.isFinite(time) ? time : 0;
 };
 
-const formatDate = (value) => {
-  if (!value) {
-    return 'Flexible move-in';
-  }
-
-  try {
-    return new Date(value).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch (error) {
-    return value;
-  }
-};
-
 const normalizeAmenities = (amenities) => {
   if (!amenities) {
     return [];
@@ -151,6 +125,7 @@ const normalizeAmenities = (amenities) => {
 function ListingsPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const [formFilters, setFormFilters] = useState(() =>
     parseFiltersFromSearch(location.search),
@@ -162,6 +137,22 @@ function ListingsPage() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const listingTypeLabels = useMemo(
+    () => ({
+      apartment: t('listings.apartment', 'Apartment'),
+      house: t('listings.house', 'House'),
+      room: t('listings.room', 'Room'),
+    }),
+    [t],
+  );
+  const roomTypeLabels = useMemo(
+    () => ({
+      private: t('listings.privateRoom', 'Private Room'),
+      shared: t('listings.sharedRoom', 'Shared Room'),
+      entire_place: t('listings.entirePlace', 'Entire Place'),
+    }),
+    [t],
+  );
 
   useEffect(() => {
     const parsed = parseFiltersFromSearch(location.search);
@@ -292,7 +283,7 @@ function ListingsPage() {
     if (activeFilters.listingType !== 'all') {
       chips.push({
         key: 'listingType',
-        label: LISTING_TYPE_LABELS[activeFilters.listingType],
+        label: listingTypeLabels[activeFilters.listingType],
         type: 'listingType',
       });
     }
@@ -300,7 +291,7 @@ function ListingsPage() {
     if (activeFilters.roomType !== 'all') {
       chips.push({
         key: 'roomType',
-        label: ROOM_TYPE_LABELS[activeFilters.roomType],
+        label: roomTypeLabels[activeFilters.roomType],
         type: 'roomType',
       });
     }
@@ -316,6 +307,24 @@ function ListingsPage() {
 
     return chips;
   }, [activeFilters]);
+
+  const formatDateLocalized = (value) => {
+    if (!value) {
+      return t('listings.flexible', 'Flexible move-in');
+    }
+
+    try {
+      return new Date(value).toLocaleDateString(
+        t('listings.locale', 'en-US'),
+        {
+          month: 'short',
+          day: 'numeric',
+        },
+      );
+    } catch (error) {
+      return value;
+    }
+  };
 
   const pushFiltersToUrl = (filters, replace = false) => {
     const search = buildSearchFromFilters(filters);
@@ -400,22 +409,22 @@ function ListingsPage() {
     <div className="listings-page">
       <section className="listings-hero">
         <div className="listings-hero-content">
-          <p className="eyebrow">Discover KUstay Listings</p>
-          <h1>Browse verified housing and find your next roommate</h1>
+          <p className="eyebrow">{t('listings.eyebrow', 'Discover KUstay Listings')}</p>
+          <h1>{t('listings.title', 'Browse verified housing and find your next roommate')}</h1>
           <form className="listings-hero-search" onSubmit={handleApplyFilters}>
             <div className="hero-search-input">
               <MapPin size={18} />
               <input
                 type="text"
                 name="location"
-                placeholder="Search neighborhood, address, or keyword"
+                placeholder={t('listings.searchPlaceholder', 'Search neighborhood, address, or keyword')}
                 value={formFilters.location}
                 onChange={handleInputChange}
               />
             </div>
             <button type="submit">
               <Search size={18} />
-              Search
+              {t('home.searchButton', 'Search')}
             </button>
           </form>
         </div>
@@ -425,22 +434,22 @@ function ListingsPage() {
         <aside className="filters-panel">
           <div className="filters-header">
             <div>
-              <p className="eyebrow">Filters</p>
-              <h2>Tailor your search</h2>
+              <p className="eyebrow">{t('listings.filters', 'Filters')}</p>
+              <h2>{t('listings.tailor', 'Tailor your search')}</h2>
             </div>
             <Filter size={18} />
           </div>
 
           <form className="filters-form" onSubmit={handleApplyFilters}>
             <div className="filter-group">
-              <label htmlFor="location">Location</label>
+              <label htmlFor="location">{t('listings.location', 'Location')}</label>
               <div className="input-with-icon">
                 <MapPin size={16} />
                 <input
                   id="location"
                   name="location"
                   type="text"
-                  placeholder="Neighborhood, street..."
+                  placeholder={t('listings.searchPlaceholder', 'Search neighborhood, address, or keyword')}
                   value={formFilters.location}
                   onChange={handleInputChange}
                 />
@@ -448,14 +457,14 @@ function ListingsPage() {
             </div>
 
             <div className="filter-group">
-              <label>Monthly budget</label>
+              <label>{t('listings.budget', 'Monthly budget')}</label>
               <div className="price-inputs">
                 <div className="input-with-icon">
                   <Home size={16} />
                   <input
                     type="number"
                     name="priceMin"
-                    placeholder="Min ₺"
+                    placeholder={t('listings.min', 'Min ₺')}
                     value={formFilters.priceMin}
                     onChange={handleInputChange}
                   />
@@ -465,7 +474,7 @@ function ListingsPage() {
                   <input
                     type="number"
                     name="priceMax"
-                    placeholder="Max ₺"
+                    placeholder={t('listings.max', 'Max ₺')}
                     value={formFilters.priceMax}
                     onChange={handleInputChange}
                   />
@@ -474,37 +483,37 @@ function ListingsPage() {
             </div>
 
             <div className="filter-group">
-              <label htmlFor="listingType">Property type</label>
+              <label htmlFor="listingType">{t('listings.propertyType', 'Property type')}</label>
               <select
                 id="listingType"
                 name="listingType"
                 value={formFilters.listingType}
                 onChange={handleInputChange}
               >
-                <option value="all">Any</option>
-                <option value="apartment">Apartment</option>
-                <option value="house">House</option>
-                <option value="room">Room</option>
+                <option value="all">{t('listings.any', 'Any')}</option>
+                <option value="apartment">{t('listings.apartment', 'Apartment')}</option>
+                <option value="house">{t('listings.house', 'House')}</option>
+                <option value="room">{t('listings.room', 'Room')}</option>
               </select>
             </div>
 
             <div className="filter-group">
-              <label htmlFor="roomType">Room type</label>
+              <label htmlFor="roomType">{t('listings.roomType', 'Room type')}</label>
               <select
                 id="roomType"
                 name="roomType"
                 value={formFilters.roomType}
                 onChange={handleInputChange}
               >
-                <option value="all">Any</option>
-                <option value="private">Private Room</option>
-                <option value="shared">Shared Room</option>
-                <option value="entire_place">Entire Place</option>
+                <option value="all">{t('listings.any', 'Any')}</option>
+                <option value="private">{t('listings.privateRoom', 'Private Room')}</option>
+                <option value="shared">{t('listings.sharedRoom', 'Shared Room')}</option>
+                <option value="entire_place">{t('listings.entirePlace', 'Entire Place')}</option>
               </select>
             </div>
 
             <div className="filter-group">
-              <label>Amenities</label>
+              <label>{t('listings.amenities', 'Amenities')}</label>
               <div className="amenities-grid">
                 {AMENITY_OPTIONS.map((amenity) => (
                   <button
@@ -523,14 +532,14 @@ function ListingsPage() {
 
             <div className="filter-actions">
               <button type="submit" className="apply-button">
-                Apply Filters
+                {t('listings.apply', 'Apply Filters')}
               </button>
               <button
                 type="button"
                 className="clear-button"
                 onClick={handleClearFilters}
               >
-                Clear all
+                {t('listings.clear', 'Clear all')}
               </button>
             </div>
           </form>
@@ -539,42 +548,42 @@ function ListingsPage() {
         <section className="listings-results">
           <div className="results-header">
             <div>
-              <p className="eyebrow">Results</p>
+              <p className="eyebrow">{t('listings.results', 'Results')}</p>
               <h2 className="results-count">
                 {loading ? (
-                  <span>Finding listings...</span>
+                  <span>{t('listings.finding', 'Finding listings...')}</span>
                 ) : (
                   <>
                     <span className="count-number">{filteredListings.length}</span>
-                    <span className="count-label">places</span>
+                    <span className="count-label">{t('listings.places', 'places')}</span>
                   </>
                 )}
               </h2>
               <p className="results-subtitle">
-                Showing active listings that match your filters
+                {t('listings.subtitle', 'Showing active listings that match your filters')}
               </p>
             </div>
 
             <div className="sort-control">
-              <label htmlFor="sort">Sort by</label>
+              <label htmlFor="sort">{t('listings.sortBy', 'Sort by')}</label>
               <select
                 id="sort"
                 value={sortOption}
                 onChange={(event) => setSortOption(event.target.value)}
               >
-                <option value="newest">Newest first</option>
-                <option value="price_low">Price: Low to High</option>
-                <option value="price_high">Price: High to Low</option>
-                <option value="rooms">Most rooms available</option>
+                <option value="newest">{t('listings.sort.newest', 'Newest first')}</option>
+                <option value="price_low">{t('listings.sort.priceLow', 'Price: Low to High')}</option>
+                <option value="price_high">{t('listings.sort.priceHigh', 'Price: High to Low')}</option>
+                <option value="rooms">{t('listings.sort.rooms', 'Most rooms available')}</option>
               </select>
             </div>
           </div>
 
           <div className="post-listing-cta">
-            <div className="cta-text">Have a place to share?</div>
+            <div className="cta-text">{t('listings.postCta', 'Have a place to share?')}</div>
             <div className="cta-button-wrap">
               <Link to="/listings/new" className="action-button solid">
-                List your place
+                {t('listings.postCtaAction', 'List your place')}
               </Link>
             </div>
           </div>
@@ -585,21 +594,21 @@ function ListingsPage() {
                 <button
                   type="button"
                   key={chip.key}
-                  className="active-chip"
-                  onClick={() => handleRemoveChip(chip)}
-                >
-                  <span>{chip.label}</span>
-                  <X size={14} />
-                </button>
-              ))}
-              <button
-                type="button"
-                className="active-chip reset"
-                onClick={handleClearFilters}
+                className="active-chip"
+                onClick={() => handleRemoveChip(chip)}
               >
-                Reset filters
+                <span>{chip.label}</span>
+                <X size={14} />
               </button>
-            </div>
+            ))}
+            <button
+              type="button"
+              className="active-chip reset"
+              onClick={handleClearFilters}
+            >
+              {t('listings.resetFilters', 'Reset filters')}
+            </button>
+          </div>
           )}
 
           {error && <div className="error-state">{error}</div>}
@@ -607,7 +616,7 @@ function ListingsPage() {
           {loading ? (
             <div className="loading-state">
               <Loader size={28} />
-              <p>Loading listings...</p>
+              <p>{t('listings.loading', 'Loading listings...')}</p>
             </div>
           ) : filteredListings.length ? (
             <div className="listings-grid">
@@ -638,7 +647,7 @@ function ListingsPage() {
                         </div>
                       )}
                       <span className="listing-type-badge">
-                        {LISTING_TYPE_LABELS[listing.listing_type] ||
+                        {listingTypeLabels[listing.listing_type] ||
                           listing.listing_type}
                       </span>
                     </div>
@@ -659,7 +668,7 @@ function ListingsPage() {
                       <div className="listing-meta">
                         <span>
                           <BedDouble size={16} />
-                          {ROOM_TYPE_LABELS[listing.room_type] ||
+                          {roomTypeLabels[listing.room_type] ||
                             'Room type'}
                         </span>
                         <span>
@@ -668,41 +677,41 @@ function ListingsPage() {
                         </span>
                         <span>
                           <Calendar size={16} />
-                          {formatDate(listing.available_from)}
+                          {formatDateLocalized(listing.available_from)}
                         </span>
                       </div>
 
                       {amenities.length > 0 && (
-                        <div className="listing-amenities">
-                          {amenities.slice(0, 3).map((amenity) => (
-                            <span key={amenity} className="amenity-pill">
-                              {amenity}
-                            </span>
-                          ))}
-                          {amenities.length > 3 && (
-                            <span className="amenity-pill muted">
-                              +{amenities.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="listing-actions">
-                        <Link to={`/listings/${listing.listing_id}`}>
-                          View details
-                        </Link>
+                      <div className="listing-amenities">
+                        {amenities.slice(0, 3).map((amenity) => (
+                          <span key={amenity} className="amenity-pill">
+                            {amenity}
+                          </span>
+                        ))}
+                        {amenities.length > 3 && (
+                          <span className="amenity-pill muted">
+                            +{amenities.length - 3} {t('listings.more', 'more')}
+                          </span>
+                        )}
                       </div>
+                    )}
+
+                    <div className="listing-actions">
+                      <Link to={`/listings/${listing.listing_id}`}>
+                          {t('listings.viewDetails', 'View details')}
+                      </Link>
                     </div>
-                  </article>
-                );
-              })}
-            </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
           ) : (
             <div className="empty-state">
-              <p>No listings match your filters yet.</p>
-              <p>Try expanding your search area or adjusting your budget.</p>
+              <p>{t('listings.emptyTitle', 'No listings match your filters yet.')}</p>
+              <p>{t('listings.emptySubtitle', 'Try expanding your search area or adjusting your budget.')}</p>
               <button type="button" onClick={handleClearFilters}>
-                Clear filters
+                {t('listings.clearFilters', 'Clear filters')}
               </button>
             </div>
           )}

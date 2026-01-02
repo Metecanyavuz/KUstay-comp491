@@ -74,7 +74,7 @@
     box-shadow: 0 8px 20px rgba(195, 17, 46, 0.35);
   }
   
-  .nav-button.secondary {
+.nav-button.secondary {
     background: transparent;
     color: var(--ku-red);
     border: 2px solid var(--ku-red);
@@ -83,6 +83,19 @@
   .nav-button.secondary:hover {
     background: var(--ku-red);
     color: white;
+  }
+
+  .nav-button.tertiary {
+    background: transparent;
+    color: var(--ku-black);
+    border: 1px solid var(--ku-border);
+    padding: 0.45rem 0.85rem;
+  }
+
+  .nav-button.tertiary:hover {
+    color: var(--ku-red);
+    border-color: var(--ku-red);
+    background: rgba(195, 17, 46, 0.06);
   }
   
   .profile-link {

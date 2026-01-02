@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Home, MessageCircle, Search, Shield, Users } from 'lucide-react';
+import { useI18n } from '../../context/I18nContext';
 import './HomePage.css';
 
 function HomePage() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const { t } = useI18n();
 
   const [stats, setStats] = useState({
     active_listings: '500+',
@@ -50,9 +52,12 @@ function HomePage() {
       {/* Hero Section */}
       <section className="hero">
         <div className="hero-content">
-          <h1 className="hero-title">Find Your Perfect Roommate</h1>
+          <h1 className="hero-title">{t('home.heroTitle', 'Find Your Perfect Roommate')}</h1>
           <p className="hero-subtitle">
-            Connect with compatible roommates and discover your ideal living space near campus
+            {t(
+              'home.heroSubtitle',
+              'Connect with compatible roommates and discover your ideal living space near campus',
+            )}
           </p>
 
           <form className="search-form" onSubmit={handleSearch}>
@@ -60,29 +65,29 @@ function HomePage() {
               <Search className="search-icon" size={20} />
               <input
                 type="text"
-                placeholder="Search by location, neighborhood..."
+                placeholder={t('home.searchPlaceholder', 'Search by location, neighborhood...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="search-input"
               />
             </div>
             <button type="submit" className="search-button">
-              Search
+              {t('home.searchButton', 'Search')}
             </button>
           </form>
 
           <div className="hero-stats">
             <div className="stat">
               <div className="stat-number">{stats.active_listings}</div>
-              <div className="stat-label">Active Listings</div>
+              <div className="stat-label">{t('home.statsActive', 'Active Listings')}</div>
             </div>
             <div className="stat">
               <div className="stat-number">{stats.students}</div>
-              <div className="stat-label">Students</div>
+              <div className="stat-label">{t('home.statsStudents', 'Students')}</div>
             </div>
             <div className="stat">
               <div className="stat-number">{stats.match_rate}</div>
-              <div className="stat-label">Match Rate</div>
+              <div className="stat-label">{t('home.statsMatch', 'Match Rate')}</div>
             </div>
           </div>
         </div>
@@ -91,12 +96,12 @@ function HomePage() {
       {/* Featured Listings */}
       <section className="featured-listings">
         <div className="section-header">
-          <h2>Featured Listings</h2>
-          <a href="/listings" className="view-all">View All →</a>
+          <h2>{t('home.featuredTitle', 'Featured Listings')}</h2>
+          <a href="/listings" className="view-all">{t('home.viewAll', 'View All →')}</a>
         </div>
 
         {loading ? (
-          <div className="loading">Loading listings...</div>
+          <div className="loading">{t('home.loading', 'Loading listings...')}</div>
         ) : (
           <div className="listings-grid">
             {listings.map((listing) => (
@@ -117,11 +122,15 @@ function HomePage() {
                     {listing.neighborhood || listing.address}
                   </p>
                   <div className="listing-details">
-                    <span className="listing-rooms">{listing.available_rooms} rooms available</span>
-                    <span className="listing-price">{listing.rent_amount} ₺/month</span>
+                    <span className="listing-rooms">
+                      {listing.available_rooms} {t('home.roomsAvailable', 'rooms available')}
+                    </span>
+                    <span className="listing-price">
+                      {listing.rent_amount} {t('home.pricePerMonth', '₺/month')}
+                    </span>
                   </div>
                   <a href={`/listings/${listing.listing_id}`} className="listing-link">
-                    View Details →
+                    {t('home.viewDetails', 'View Details →')}
                   </a>
                 </div>
               </div>
@@ -132,62 +141,62 @@ function HomePage() {
 
       {/* How It Works */}
       <section className="how-it-works">
-        <h2>How KUstay Works</h2>
+        <h2>{t('home.howItWorks', 'How KUstay Works')}</h2>
         <div className="steps-grid">
           <div className="step">
             <div className="step-icon">
               <Users size={32} />
             </div>
-            <h3>Create Your Profile</h3>
-            <p>Tell us about your preferences, lifestyle, and what you're looking for in a roommate</p>
+            <h3>{t('home.stepCreateProfile', 'Create Your Profile')}</h3>
+            <p>{t('home.stepCreateProfileDesc', "Tell us about your preferences, lifestyle, and what you're looking for in a roommate")}</p>
           </div>
           <div className="step">
             <div className="step-icon">
               <Search size={32} />
             </div>
-            <h3>Browse & Match</h3>
-            <p>Explore listings and find compatible roommates based on your preferences</p>
+            <h3>{t('home.stepBrowse', 'Browse & Match')}</h3>
+            <p>{t('home.stepBrowseDesc', 'Explore listings and find compatible roommates based on your preferences')}</p>
           </div>
           <div className="step">
             <div className="step-icon">
               <MessageCircle size={32} />
             </div>
-            <h3>Connect & Chat</h3>
-            <p>Message potential roommates and schedule viewings</p>
+            <h3>{t('home.stepChat', 'Connect & Chat')}</h3>
+            <p>{t('home.stepChatDesc', 'Message potential roommates and schedule viewings')}</p>
           </div>
           <div className="step">
             <div className="step-icon">
               <Home size={32} />
             </div>
-            <h3>Move In</h3>
-            <p>Find your perfect match and start your new living experience</p>
+            <h3>{t('home.stepMove', 'Move In')}</h3>
+            <p>{t('home.stepMoveDesc', 'Find your perfect match and start your new living experience')}</p>
           </div>
         </div>
       </section>
 
       {/* Features */}
       <section className="features">
-        <h2>Why Choose KUstay?</h2>
+        <h2>{t('home.whyChoose', 'Why Choose KUstay?')}</h2>
         <div className="features-grid">
           <div className="feature">
             <Shield className="feature-icon" size={24} />
-            <h3>Verified Students</h3>
-            <p>All users are verified KU students for your safety</p>
+            <h3>{t('home.featureVerified', 'Verified Students')}</h3>
+            <p>{t('home.featureVerifiedDesc', 'All users are verified KU students for your safety')}</p>
           </div>
           <div className="feature">
             <Users className="feature-icon" size={24} />
-            <h3>Smart Matching</h3>
-            <p>Our algorithm finds compatible roommates based on your lifestyle</p>
+            <h3>{t('home.featureMatching', 'Smart Matching')}</h3>
+            <p>{t('home.featureMatchingDesc', 'Our algorithm finds compatible roommates based on your lifestyle')}</p>
           </div>
           <div className="feature">
             <MessageCircle className="feature-icon" size={24} />
-            <h3>Easy Communication</h3>
-            <p>Built-in messaging to connect with potential roommates</p>
+            <h3>{t('home.featureCommunication', 'Easy Communication')}</h3>
+            <p>{t('home.featureCommunicationDesc', 'Built-in messaging to connect with potential roommates')}</p>
           </div>
           <div className="feature">
             <Home className="feature-icon" size={24} />
-            <h3>Quality Listings</h3>
-            <p>Curated housing options near campus</p>
+            <h3>{t('home.featureListings', 'Quality Listings')}</h3>
+            <p>{t('home.featureListingsDesc', 'Curated housing options near campus')}</p>
           </div>
         </div>
       </section>
@@ -195,11 +204,11 @@ function HomePage() {
       {/* CTA Section */}
       <section className="cta">
         <div className="cta-content">
-          <h2>Ready to Find Your Perfect Place?</h2>
-          <p>Join thousands of students who've found their ideal roommates</p>
+          <h2>{t('home.ready', 'Ready to Find Your Perfect Place?')}</h2>
+          <p>{t('home.join', "Join thousands of students who've found their ideal roommates")}</p>
           <div className="cta-buttons">
-            <a href="/signup" className="cta-button primary">Get Started</a>
-            <a href="/listings" className="cta-button secondary">Browse Listings</a>
+            <a href="/signup" className="cta-button primary">{t('home.ctaPrimary', 'Get Started')}</a>
+            <a href="/listings" className="cta-button secondary">{t('home.ctaSecondary', 'Browse Listings')}</a>
           </div>
         </div>
       </section>
