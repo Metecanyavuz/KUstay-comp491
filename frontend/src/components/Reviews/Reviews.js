@@ -256,7 +256,7 @@ function Reviews() {
                     )}
                     {building.latest_unit_details && (
                       <p className="block-review-unit">
-                        Unit: {building.latest_unit_details}
+                        {t('reviews.unitInline', 'Unit')}: {building.latest_unit_details}
                       </p>
                     )}
                     <div className="block-review-meta">

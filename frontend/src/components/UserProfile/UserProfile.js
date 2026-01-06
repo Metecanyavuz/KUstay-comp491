@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useI18n } from '../../context/I18nContext';
 import {
   User,
   Phone,
@@ -24,6 +25,8 @@ import UserActionsMenu from '../Shared/UserActionsMenu';  // YENİ IMPORT
 function UserProfile() {
   const { userId } = useParams();
   const { user: currentUser } = useAuth();
+  const { t } = useI18n();
+  const locale = t('general.locale', 'en-US');
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,13 +53,14 @@ function UserProfile() {
 
   const renderAvatar = () => {
     const hasPhoto = profile?.profile_photo_url && !photoError;
+    const fallbackName = t('userProfile.userFallback', 'User');
 
     return (
       <div className={`user-avatar ${hasPhoto ? 'has-photo' : ''}`}>
         {hasPhoto ? (
           <img
             src={profile.profile_photo_url}
-            alt={`${profile.first_name || 'User'}'s profile`}
+            alt={t('userProfile.photoAlt', `${profile.first_name || fallbackName}'s profile`)}
             onError={() => setPhotoError(true)}
           />
         ) : (
@@ -77,13 +81,13 @@ function UserProfile() {
         const data = await response.json();
         setProfile(data);
       } else if (response.status === 404) {
-        setError('Profile not found');
+        setError(t('userProfile.notFound', 'Profile not found'));
       } else {
-        setError('Failed to load profile');
+        setError(t('userProfile.loadError', 'Failed to load profile'));
       }
     } catch (err) {
       console.error('Fetch profile error:', err);
-      setError('Something went wrong');
+      setError(t('userProfile.genericError', 'Something went wrong'));
     } finally {
       setLoading(false);
     }
@@ -102,9 +106,9 @@ function UserProfile() {
       <div className="profile-page">
         <div className="error-container">
           <AlertCircle size={48} />
-          <h2>Invalid profile</h2>
+          <h2>{t('userProfile.invalid', 'Invalid profile')}</h2>
           <button onClick={() => navigate('/matches')} className="primary-button">
-            Back to Matches
+            {t('userProfile.backToMatches', 'Back to Matches')}
           </button>
         </div>
       </div>
@@ -116,7 +120,7 @@ function UserProfile() {
       <div className="profile-page">
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>Loading profile...</p>
+          <p>{t('userProfile.loading', 'Loading profile...')}</p>
         </div>
       </div>
     );
@@ -129,7 +133,7 @@ function UserProfile() {
           <AlertCircle size={48} />
           <h2>{error}</h2>
           <button onClick={() => navigate('/matches')} className="primary-button">
-            Back to Matches
+            {t('userProfile.backToMatches', 'Back to Matches')}
           </button>
         </div>
       </div>
@@ -141,9 +145,9 @@ function UserProfile() {
       <div className="profile-page">
         <div className="error-container">
           <AlertCircle size={48} />
-          <h2>Profile not found</h2>
+          <h2>{t('userProfile.notFound', 'Profile not found')}</h2>
           <button onClick={() => navigate('/matches')} className="primary-button">
-            Back to Matches
+            {t('userProfile.backToMatches', 'Back to Matches')}
           </button>
         </div>
       </div>
@@ -159,7 +163,7 @@ function UserProfile() {
           onClick={() => navigate(-1)}
         >
           <ArrowLeft size={20} />
-          Back
+          {t('userProfile.back', 'Back')}
         </button>
 
         {/* Header */}
@@ -169,14 +173,16 @@ function UserProfile() {
             <div className="user-info">
               <h1>{profile.first_name && profile.last_name 
                 ? `${profile.first_name} ${profile.last_name}` 
-                : profile.user?.email || 'User'}</h1>
+                : profile.user?.email || t('userProfile.userFallback', 'User')}</h1>
               <p className="user-type">
-                {profile.user?.user_type === 'KU_Student' ? 'KU Student' : 'External Student'}
+                {profile.user?.user_type === 'KU_Student'
+                  ? t('profile.userTypeKu', 'KU Student')
+                  : t('profile.userTypeExternal', 'External Student')}
               </p>
               {profile.user?.user_type === 'KU_Student' && profile.user?.is_verified && (
                 <span className="verification-badge verified">
                   <CheckCircle size={16} />
-                  Verified KU Student
+                  {t('profile.verifiedKuStudent', 'Verified KU Student')}
                 </span>
               )}
             </div>
@@ -187,14 +193,14 @@ function UserProfile() {
             <div className="user-actions">
               <button className="message-button-header" onClick={startConversation}>
                 <MessageCircle size={20} />
-                Send Message
+                {t('userProfile.sendMessage', 'Send Message')}
               </button>
               
               {/* ÜÇ NOKTA MENÜSÜ - BURAYA EKLENDİ */}
-              <UserActionsMenu 
-                userId={parseInt(userId)}
-                username={profile.first_name || profile.user?.email || 'User'}
-                reportType="user"
+                <UserActionsMenu 
+                  userId={parseInt(userId)}
+                  username={profile.first_name || profile.user?.email || t('userProfile.userFallback', 'User')}
+                  reportType="user"
                 onBlockChange={(isBlocked) => {
                   if (isBlocked) {
                     navigate('/matches');
@@ -211,11 +217,11 @@ function UserProfile() {
           <div className="view-section">
             <h2>
               <User size={24} />
-              Personal Information
+              {t('profile.personalInfo', 'Personal Information')}
             </h2>
             <div className="info-grid">
               <div className="info-item">
-                <label>Name</label>
+                <label>{t('profile.name', 'Name')}</label>
                 <p>{profile.first_name} {profile.last_name}</p>
               </div>
               {profile.user?.user_type === 'KU_Student' && (
@@ -224,7 +230,7 @@ function UserProfile() {
                     <div className="info-item">
                       <label>
                         <Briefcase size={16} />
-                        Department
+                        {t('userProfile.department', 'Department')}
                       </label>
                       <p>{profile.department}</p>
                     </div>
@@ -233,7 +239,7 @@ function UserProfile() {
                     <div className="info-item">
                       <label>
                         <GraduationCap size={16} />
-                        Faculty
+                        {t('userProfile.faculty', 'Faculty')}
                       </label>
                       <p>{profile.faculty}</p>
                     </div>
@@ -244,7 +250,7 @@ function UserProfile() {
                 <div className="info-item">
                   <label>
                     <Phone size={16} />
-                    Phone
+                    {t('profile.phone', 'Phone')}
                   </label>
                   <p>{profile.phone_number}</p>
                 </div>
@@ -256,23 +262,23 @@ function UserProfile() {
           <div className="view-section">
             <h2>
               <Home size={24} />
-              Housing Preferences
+              {t('profile.housingPreferences', 'Housing Preferences')}
             </h2>
             <div className="info-grid">
               {(profile.budget_min || profile.budget_max) && (
                 <div className="info-item">
                   <label>
                     <DollarSign size={16} />
-                    Budget Range
+                    {t('profile.budgetRange', 'Budget Range')}
                   </label>
-                  <p>₺{profile.budget_min} - ₺{profile.budget_max} / month</p>
+                  <p>₺{profile.budget_min} - ₺{profile.budget_max} {t('currency.perMonth', '/ month')}</p>
                 </div>
               )}
               {profile.preferred_neighborhoods && profile.preferred_neighborhoods.length > 0 && (
                 <div className="info-item">
                   <label>
                     <MapPin size={16} />
-                    Preferred Neighborhoods
+                    {t('profile.preferredNeighborhoods', 'Preferred Neighborhoods')}
                   </label>
                   <p>{Array.isArray(profile.preferred_neighborhoods) 
                     ? profile.preferred_neighborhoods.join(', ') 
@@ -281,18 +287,21 @@ function UserProfile() {
               )}
               {profile.room_type_preference && (
                 <div className="info-item">
-                  <label>Room Type</label>
-                  <p>{profile.room_type_preference === 'private' ? 'Private Room' : 
-                     profile.room_type_preference === 'shared' ? 'Shared Room' : 'Entire Place'}</p>
+                  <label>{t('profile.roomType', 'Room Type')}</label>
+                  <p>{profile.room_type_preference === 'private'
+                    ? t('profile.roomTypePrivate', 'Private Room')
+                    : profile.room_type_preference === 'shared'
+                      ? t('profile.roomTypeShared', 'Shared Room')
+                      : t('profile.roomTypeEntire', 'Entire Place')}</p>
                 </div>
               )}
               {profile.move_in_date && (
                 <div className="info-item">
                   <label>
                     <Calendar size={16} />
-                    Move-in Date
+                    {t('profile.moveInDateLabel', 'Move-in Date')}
                   </label>
-                  <p>{new Date(profile.move_in_date).toLocaleDateString()}</p>
+                  <p>{new Date(profile.move_in_date).toLocaleDateString(locale)}</p>
                 </div>
               )}
             </div>
@@ -302,40 +311,49 @@ function UserProfile() {
           <div className="view-section">
             <h2>
               <Sparkles size={24} />
-              Lifestyle Preferences
+              {t('profile.lifestylePreferences', 'Lifestyle Preferences')}
             </h2>
             <div className="info-grid">
               {profile.sleep_schedule && (
                 <div className="info-item">
                   <label>
                     <Moon size={16} />
-                    Sleep Schedule
+                    {t('profile.sleepSchedule', 'Sleep Schedule')}
                   </label>
-                  <p>{profile.sleep_schedule === 'early_bird' ? 'Early Bird' : 
-                     profile.sleep_schedule === 'night_owl' ? 'Night Owl' : 'Flexible'}</p>
+                  <p>{profile.sleep_schedule === 'early_bird'
+                    ? t('profile.sleepEarlyBird', 'Early Bird')
+                    : profile.sleep_schedule === 'night_owl'
+                      ? t('profile.sleepNightOwl', 'Night Owl')
+                      : t('profile.sleepFlexible', 'Flexible')}</p>
                 </div>
               )}
               {profile.cleanliness_level && (
                 <div className="info-item">
                   <label>
                     <Sparkles size={16} />
-                    Cleanliness Level
+                    {t('profile.cleanlinessLevel', 'Cleanliness Level')}
                   </label>
-                  <p>{profile.cleanliness_level.charAt(0).toUpperCase() + profile.cleanliness_level.slice(1)}</p>
+                  <p>{profile.cleanliness_level === 'low'
+                    ? t('profile.cleanlinessLow', 'Low')
+                    : profile.cleanliness_level === 'medium'
+                      ? t('profile.cleanlinessMedium', 'Medium')
+                      : profile.cleanliness_level === 'high'
+                        ? t('profile.cleanlinessHigh', 'High')
+                        : profile.cleanliness_level}</p>
                 </div>
               )}
               <div className="info-item">
-                <label>Smoker</label>
-                <p>{profile.smoker ? 'Yes' : 'No'}</p>
+                <label>{t('profile.smoker', 'Smoker')}</label>
+                <p>{profile.smoker ? t('profile.yes', 'Yes') : t('profile.no', 'No')}</p>
               </div>
               <div className="info-item">
-                <label>Pets</label>
-                <p>{profile.pets ? 'Yes' : 'No'}</p>
+                <label>{t('profile.pets', 'Pets')}</label>
+                <p>{profile.pets ? t('profile.yes', 'Yes') : t('profile.no', 'No')}</p>
               </div>
             </div>
             {profile.lifestyle_notes && (
               <div className="info-item full-width">
-                <label>Additional Notes</label>
+                <label>{t('profile.additionalNotes', 'Additional Notes')}</label>
                 <p>{profile.lifestyle_notes}</p>
               </div>
             )}
@@ -346,7 +364,7 @@ function UserProfile() {
             <div className="contact-section">
               <button className="contact-button" onClick={startConversation}>
                 <MessageCircle size={20} />
-                Send Message to {profile.first_name}
+                {t('userProfile.sendMessageTo', 'Send Message to')} {profile.first_name}
               </button>
             </div>
           )}

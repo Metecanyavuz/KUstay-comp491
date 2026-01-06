@@ -5,6 +5,7 @@ import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-lea
 import L from 'leaflet';
 import { getCSRFToken } from '../../utils/csrf';
 import { AMENITY_OPTIONS } from '../../data/amenities';
+import { useI18n } from '../../context/I18nContext';
 import './CreateListing.css';
 
 const round6 = (value) => Number.parseFloat(value).toFixed(6);
@@ -28,22 +29,11 @@ const defaultForm = {
   house_rules: '',
 };
 
-const LISTING_TYPE_OPTIONS = [
-  { value: 'apartment', label: 'Apartment' },
-  { value: 'house', label: 'House' },
-  { value: 'room', label: 'Room' },
-];
-
-const ROOM_TYPE_OPTIONS = [
-  { value: 'private', label: 'Private Room' },
-  { value: 'shared', label: 'Shared Room' },
-  { value: 'entire_place', label: 'Entire Place' },
-];
-
-const OTHER_AMENITY_LABEL = 'Other';
+const OTHER_AMENITY_VALUE = 'Other';
 
 function CreateListing() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [form, setForm] = useState(defaultForm);
   const [imageFile, setImageFile] = useState(null);
   const [galleryFiles, setGalleryFiles] = useState([]);
@@ -74,6 +64,31 @@ function CreateListing() {
     popupAnchor: [1, -34],
     shadowSize: [41, 41],
   });
+
+  const listingTypeOptions = [
+    { value: 'apartment', label: t('listings.apartment', 'Apartment') },
+    { value: 'house', label: t('listings.house', 'House') },
+    { value: 'room', label: t('listings.room', 'Room') },
+  ];
+
+  const roomTypeOptions = [
+    { value: 'private', label: t('listings.privateRoom', 'Private Room') },
+    { value: 'shared', label: t('listings.sharedRoom', 'Shared Room') },
+    { value: 'entire_place', label: t('listings.entirePlace', 'Entire Place') },
+  ];
+
+  const amenityLabels = {
+    'Wi-Fi Included': t('amenities.wifi', 'Wi-Fi Included'),
+    'Utilities Included': t('amenities.utilities', 'Utilities Included'),
+    'Washer/Dryer': t('amenities.washerDryer', 'Washer/Dryer'),
+    'Parking Spot': t('amenities.parking', 'Parking Spot'),
+    'Pet Friendly': t('amenities.petFriendly', 'Pet Friendly'),
+    'Air Conditioning': t('amenities.ac', 'Air Conditioning'),
+    Furnished: t('amenities.furnished', 'Furnished'),
+    'Gym Access': t('amenities.gym', 'Gym Access'),
+  };
+
+  const otherAmenityLabel = t('createListing.amenityOther', 'Other');
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -116,7 +131,7 @@ function CreateListing() {
           credentials: 'include',
         });
         if (!response.ok) {
-          throw new Error('Unable to load provinces right now.');
+          throw new Error(t('createListing.provinceLoadError', 'Unable to load provinces right now.'));
         }
         const data = await response.json();
         const items = Array.isArray(data) ? data : data?.data || [];
@@ -124,7 +139,12 @@ function CreateListing() {
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error(err);
-          setLocationError('Şehir verisi alınamadı. Lütfen manuel girin veya tekrar deneyin.');
+          setLocationError(
+            t(
+              'createListing.cityLoadError',
+              'Unable to load cities. Please enter manually or try again.',
+            ),
+          );
         }
       } finally {
         setLocationLoading(false);
@@ -289,14 +309,19 @@ function CreateListing() {
         { credentials: 'include' },
       );
       if (!response.ok) {
-        throw new Error('Mahalleler alınamadı');
+        throw new Error(t('createListing.neighborhoodLoadError', 'Unable to load neighborhoods.'));
       }
       const data = await response.json();
       const items = Array.isArray(data) ? data : data?.data || [];
       setNeighborhoodOptions(items);
     } catch (err) {
       console.error(err);
-      setLocationError('Mahalle listesi yüklenemedi, elle yazabilirsiniz.');
+      setLocationError(
+        t(
+          'createListing.neighborhoodLoadErrorDetail',
+          'Neighborhood list failed to load; you can type manually.',
+        ),
+      );
       setNeighborhoodOptions([]);
     } finally {
       setNeighborhoodLoading(false);
@@ -321,14 +346,14 @@ function CreateListing() {
         credentials: 'include',
       });
       if (!response.ok) {
-        throw new Error('Sokaklar alınamadı');
+        throw new Error(t('createListing.streetLoadError', 'Unable to load streets.'));
       }
       const data = await response.json();
       const items = Array.isArray(data) ? data : data?.data || [];
       setStreetOptions(items);
     } catch (err) {
       console.error(err);
-      setStreetError('Sokak listesi yüklenemedi.');
+      setStreetError(t('createListing.streetLoadErrorDetail', 'Could not load streets.'));
       setStreetOptions([]);
     } finally {
       setStreetLoading(false);
@@ -386,7 +411,7 @@ function CreateListing() {
       return {
         ...prev,
         amenities: nextAmenities,
-        amenity_other: amenity === OTHER_AMENITY_LABEL && hasAmenity ? '' : prev.amenity_other,
+        amenity_other: amenity === OTHER_AMENITY_VALUE && hasAmenity ? '' : prev.amenity_other,
       };
     });
   };
@@ -396,12 +421,12 @@ function CreateListing() {
     setError('');
 
     if (!form.title.trim() || !form.description.trim() || !form.address.trim()) {
-      setError('Title, description, and address are required.');
+      setError(t('createListing.errorRequired', 'Title, description, and address are required.'));
       return;
     }
 
     if (!form.rent_amount) {
-      setError('Please add a monthly rent amount.');
+      setError(t('createListing.errorRent', 'Please add a monthly rent amount.'));
       return;
     }
 
@@ -411,10 +436,10 @@ function CreateListing() {
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean);
-    const hasOtherAmenity = selectedAmenities.includes(OTHER_AMENITY_LABEL);
+    const hasOtherAmenity = selectedAmenities.includes(OTHER_AMENITY_VALUE);
     const otherAmenity = form.amenity_other.trim();
     const combinedAmenities = selectedAmenities.filter(
-      (item) => item !== OTHER_AMENITY_LABEL,
+      (item) => item !== OTHER_AMENITY_VALUE,
     );
     if (hasOtherAmenity && otherAmenity) {
       const extraAmenities = otherAmenity
@@ -439,7 +464,7 @@ function CreateListing() {
     const addressDetail = form.address_detail.trim();
 
     if (!city || !district) {
-      setError('Please enter your city and district.');
+      setError(t('createListing.errorCityDistrict', 'Please enter your city and district.'));
       return;
     }
 
@@ -499,7 +524,10 @@ function CreateListing() {
       });
 
       if (!response.ok) {
-        let message = 'Could not save listing. Please check your info and try again.';
+        let message = t(
+          'createListing.errorSave',
+          'Could not save listing. Please check your info and try again.',
+        );
         try {
           const data = await response.json();
           if (data?.detail) {
@@ -558,7 +586,12 @@ function CreateListing() {
       }
       const results = await response.json();
       if (!Array.isArray(results) || results.length === 0) {
-        setGeocodeWarning('Adres konumu bulunamadı; koordinatlar olmadan kaydedilecek.');
+        setGeocodeWarning(
+          t(
+            'createListing.geocodeNotFound',
+            'Address location not found; it will be saved without coordinates.',
+          ),
+        );
         return null;
       }
       const { lat, lon } = results[0];
@@ -570,11 +603,21 @@ function CreateListing() {
           }
           return coords;
       }
-      setGeocodeWarning('Adres konumu bulunamadı; koordinatlar olmadan kaydedilecek.');
+      setGeocodeWarning(
+        t(
+          'createListing.geocodeNotFound',
+          'Address location not found; it will be saved without coordinates.',
+        ),
+      );
       return null;
     } catch (error) {
       console.warn('Geocoding failed', error);
-      setGeocodeWarning('Konum doğrulama başarısız; koordinatlar olmadan kaydedilecek.');
+      setGeocodeWarning(
+        t(
+          'createListing.geocodeFailed',
+          'Location validation failed; it will be saved without coordinates.',
+        ),
+      );
       return null;
     }
   };
@@ -584,10 +627,13 @@ function CreateListing() {
       <div className="create-listing-shell">
         <header className="create-listing-header">
           <div>
-            <p className="eyebrow">Share your place</p>
-            <h1>Create a new listing</h1>
+            <p className="eyebrow">{t('createListing.eyebrow', 'Share your place')}</p>
+            <h1>{t('createListing.title', 'Create a new listing')}</h1>
             <p className="lede">
-              Add details about your place so the KUstay community can discover it.
+              {t(
+                'createListing.lede',
+                'Add details about your place so the KUstay community can discover it.',
+              )}
             </p>
           </div>
           <button
@@ -595,7 +641,7 @@ function CreateListing() {
             className="ghost-button"
             onClick={() => navigate('/listings')}
           >
-            Back to listings
+            {t('createListing.backToListings', 'Back to listings')}
           </button>
         </header>
 
@@ -603,16 +649,16 @@ function CreateListing() {
           <section className="form-panel">
             <div className="panel-header">
               <Home size={18} />
-              <h2>Listing basics</h2>
+              <h2>{t('createListing.sectionBasics', 'Listing basics')}</h2>
             </div>
 
             <div className="form-grid">
               <label className="form-field">
-                <span>Title *</span>
+                <span>{t('createListing.titleLabel', 'Title *')}</span>
                 <input
                   name="title"
                   type="text"
-                  placeholder="Cozy 2+1 near campus"
+                  placeholder={t('createListing.titlePlaceholder', 'Cozy 2+1 near campus')}
                   value={form.title}
                   onChange={handleChange}
                   required
@@ -620,13 +666,13 @@ function CreateListing() {
               </label>
 
               <label className="form-field">
-                <span>Listing type</span>
+                <span>{t('createListing.listingTypeLabel', 'Listing type')}</span>
                 <select
                   name="listing_type"
                   value={form.listing_type}
                   onChange={handleChange}
                 >
-                  {LISTING_TYPE_OPTIONS.map((option) => (
+                  {listingTypeOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -635,13 +681,13 @@ function CreateListing() {
               </label>
 
               <label className="form-field">
-                <span>Room type</span>
+                <span>{t('createListing.roomTypeLabel', 'Room type')}</span>
                 <select
                   name="room_type"
                   value={form.room_type}
                   onChange={handleChange}
                 >
-                  {ROOM_TYPE_OPTIONS.map((option) => (
+                  {roomTypeOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -650,13 +696,13 @@ function CreateListing() {
               </label>
 
               <label className="form-field">
-                <span>Monthly rent (₺) *</span>
+                <span>{t('createListing.monthlyRentLabel', 'Monthly rent (₺) *')}</span>
                 <input
                   name="rent_amount"
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="7500"
+                  placeholder={t('createListing.rentPlaceholder', '7500')}
                   value={form.rent_amount}
                   onChange={handleChange}
                   required
@@ -664,7 +710,7 @@ function CreateListing() {
               </label>
 
               <label className="form-field">
-                <span>Available from</span>
+                <span>{t('createListing.availableFromLabel', 'Available from')}</span>
                 <div className="input-with-icon">
                   <Calendar size={16} />
                   <input
@@ -677,7 +723,7 @@ function CreateListing() {
               </label>
 
               <label className="form-field">
-                <span>Cover image (optional)</span>
+                <span>{t('createListing.coverImageLabel', 'Cover image (optional)')}</span>
                 <input
                   name="image"
                   type="file"
@@ -686,7 +732,7 @@ function CreateListing() {
                 />
               </label>
               <label className="form-field">
-                <span>Additional photos (optional)</span>
+                <span>{t('createListing.additionalPhotosLabel', 'Additional photos (optional)')}</span>
                 <input
                   name="images"
                   type="file"
@@ -696,18 +742,23 @@ function CreateListing() {
                   onChange={handleGalleryChange}
                 />
                 <small className="form-hint">
-                  Select multiple images or add more after the first pick.
+                  {t(
+                    'createListing.additionalPhotosHint',
+                    'Select multiple images or add more after the first pick.',
+                  )}
                 </small>
                 {galleryFiles.length > 0 && (
                   <div className="file-list">
                     <div className="file-list-header">
-                      <span>{galleryFiles.length} selected</span>
+                      <span>
+                        {galleryFiles.length} {t('createListing.filesSelected', 'selected')}
+                      </span>
                       <button
                         type="button"
                         className="ghost-button"
                         onClick={handleGalleryClear}
                       >
-                        Clear
+                        {t('createListing.clear', 'Clear')}
                       </button>
                     </div>
                     <div className="file-chips">
@@ -717,7 +768,7 @@ function CreateListing() {
                           <button
                             type="button"
                             onClick={() => handleGalleryRemove(index)}
-                            aria-label={`Remove ${file.name}`}
+                            aria-label={`${t('createListing.removeFile', 'Remove')} ${file.name}`}
                           >
                             ×
                           </button>
@@ -733,31 +784,35 @@ function CreateListing() {
           <section className="form-panel">
             <div className="panel-header">
               <MapPin size={18} />
-              <h2>Location</h2>
+              <h2>{t('createListing.sectionLocation', 'Location')}</h2>
             </div>
 
             <div className="form-grid two">
               <label className="form-field">
-                <span>İl *</span>
+                <span>{t('createListing.cityLabel', 'City *')}</span>
                 <select
                   name="city"
                   value={form.city}
                   onChange={(event) => handleCityChange(event.target.value)}
                   required
                 >
-                  <option value="">İl seçin</option>
+                  <option value="">{t('createListing.citySelect', 'Select city')}</option>
                   {provinceData.map((province) => (
                     <option key={province.id || province.name} value={province.name}>
                       {province.name}
                     </option>
                   ))}
                 </select>
-                {locationLoading && <small className="form-hint">Şehirler yükleniyor…</small>}
+                {locationLoading && (
+                  <small className="form-hint">
+                    {t('createListing.cityLoading', 'Cities are loading...')}
+                  </small>
+                )}
                 {locationError && <small className="form-error inline">{locationError}</small>}
               </label>
 
               <label className="form-field">
-                <span>İlçe *</span>
+                <span>{t('createListing.districtLabel', 'District *')}</span>
                 <select
                   name="district"
                   value={form.district}
@@ -765,7 +820,7 @@ function CreateListing() {
                   required
                   disabled={!form.city}
                 >
-                  <option value="">İlçe seçin</option>
+                  <option value="">{t('createListing.districtSelect', 'Select district')}</option>
                   {districtOptions.map((district) => (
                     <option
                       key={district.id || district._id || district.name}
@@ -780,14 +835,14 @@ function CreateListing() {
 
             <div className="form-grid two">
               <label className="form-field">
-                <span>Mahalle</span>
+                <span>{t('createListing.neighborhoodLabel', 'Neighborhood')}</span>
                 <select
                   name="neighborhood"
                   value={form.neighborhood}
                   onChange={(event) => handleNeighborhoodChange(event.target.value)}
                   disabled={!form.district}
                 >
-                  <option value="">Mahalle seçin</option>
+                  <option value="">{t('createListing.neighborhoodSelect', 'Select neighborhood')}</option>
                   {neighborhoodOptions.map((hood) => (
                     <option
                       key={hood.id || hood._id || hood.name || hood}
@@ -798,12 +853,14 @@ function CreateListing() {
                   ))}
                 </select>
                 {neighborhoodLoading && (
-                  <small className="form-hint">Mahalleler yükleniyor…</small>
+                  <small className="form-hint">
+                    {t('createListing.neighborhoodLoading', 'Neighborhoods are loading...')}
+                  </small>
                 )}
               </label>
 
               <label className="form-field">
-                <span>Sokak *</span>
+                <span>{t('createListing.streetLabel', 'Street *')}</span>
                 <select
                   name="address"
                   value={form.address}
@@ -811,7 +868,7 @@ function CreateListing() {
                   disabled={!selectedNeighborhoodId || streetLoading}
                   required
                 >
-                  <option value="">Sokak seçin</option>
+                  <option value="">{t('createListing.streetSelect', 'Select street')}</option>
                   {streetOptions.map((street) => (
                     <option
                       key={street.id || street.sokak_id || street.name || street.sokak_adi}
@@ -821,18 +878,22 @@ function CreateListing() {
                     </option>
                   ))}
                 </select>
-                {streetLoading && <small className="form-hint">Sokaklar yükleniyor…</small>}
+                {streetLoading && (
+                  <small className="form-hint">
+                    {t('createListing.streetLoading', 'Streets are loading...')}
+                  </small>
+                )}
                 {streetError && <small className="form-error inline">{streetError}</small>}
               </label>
             </div>
 
             <div className="form-grid two">
               <label className="form-field">
-                <span>Adres detayı (opsiyonel)</span>
+                <span>{t('createListing.addressDetailLabel', 'Address detail (optional)')}</span>
                 <input
                   name="address_detail"
                   type="text"
-                  placeholder="Site adı, apartman no vb."
+                  placeholder={t('createListing.addressDetailPlaceholder', 'Site name, apartment no, etc.')}
                   value={form.address_detail}
                   onChange={handleChange}
                 />
@@ -841,8 +902,13 @@ function CreateListing() {
 
             <div className="map-picker">
               <div className="map-header">
-                <span>Konumu ince ayarla</span>
-                <small>Adres bulunamazsa pini taşıyarak konumu seçin.</small>
+                <span>{t('createListing.mapAdjustTitle', 'Fine-tune location')}</span>
+                <small>
+                  {t(
+                    'createListing.mapAdjustHint',
+                    'If the address is not found, move the pin to select the location.',
+                  )}
+                </small>
               </div>
             <MapContainer
               center={mapCenter}
@@ -869,12 +935,12 @@ function CreateListing() {
           <section className="form-panel">
             <div className="panel-header">
               <PlusCircle size={18} />
-              <h2>Details</h2>
+              <h2>{t('createListing.sectionDetails', 'Details')}</h2>
             </div>
 
             <div className="form-grid three">
               <label className="form-field">
-                <span>Total rooms</span>
+                <span>{t('createListing.totalRoomsLabel', 'Total rooms')}</span>
                 <input
                   name="total_rooms"
                   type="number"
@@ -884,7 +950,7 @@ function CreateListing() {
                 />
               </label>
               <label className="form-field">
-                <span>Available rooms</span>
+                <span>{t('createListing.availableRoomsLabel', 'Available rooms')}</span>
                 <input
                   name="available_rooms"
                   type="number"
@@ -894,9 +960,9 @@ function CreateListing() {
                 />
               </label>
               <div className="form-field amenity-field">
-                <span>Amenities</span>
+                <span>{t('createListing.amenitiesLabel', 'Amenities')}</span>
                 <div className="amenities-grid">
-                  {[...AMENITY_OPTIONS, OTHER_AMENITY_LABEL].map((amenity) => (
+                  {[...AMENITY_OPTIONS, OTHER_AMENITY_VALUE].map((amenity) => (
                     <button
                       key={amenity}
                       type="button"
@@ -905,33 +971,46 @@ function CreateListing() {
                       }`}
                       onClick={() => handleAmenityToggle(amenity)}
                     >
-                      {amenity}
+                      {amenity === OTHER_AMENITY_VALUE ? otherAmenityLabel : amenityLabels[amenity] || amenity}
                     </button>
                   ))}
                 </div>
-                <small className="form-hint">Select all that apply.</small>
+                <small className="form-hint">
+                  {t('createListing.amenitiesHint', 'Select all that apply.')}
+                </small>
               </div>
-              {form.amenities.includes(OTHER_AMENITY_LABEL) && (
+              {form.amenities.includes(OTHER_AMENITY_VALUE) && (
                 <label className="form-field amenity-other">
-                  <span>Other amenities (optional)</span>
+                  <span>{t('createListing.otherAmenitiesLabel', 'Other amenities (optional)')}</span>
                   <input
                     name="amenity_other"
                     type="text"
-                    placeholder="e.g. Balcony, Dishwasher"
+                    placeholder={t(
+                      'createListing.otherAmenitiesPlaceholder',
+                      'e.g. Balcony, Dishwasher',
+                    )}
                     value={form.amenity_other}
                     onChange={handleChange}
                   />
-                  <small className="form-hint">Separate multiple items with commas.</small>
+                  <small className="form-hint">
+                    {t(
+                      'createListing.otherAmenitiesHint',
+                      'Separate multiple items with commas.',
+                    )}
+                  </small>
                 </label>
               )}
             </div>
 
             <label className="form-field">
-              <span>Description *</span>
+              <span>{t('createListing.descriptionLabel', 'Description *')}</span>
               <textarea
                 name="description"
                 rows="4"
-                placeholder="Describe the place, nearby spots, roommates, etc."
+                placeholder={t(
+                  'createListing.descriptionPlaceholder',
+                  'Describe the place, nearby spots, roommates, etc.',
+                )}
                 value={form.description}
                 onChange={handleChange}
                 required
@@ -939,11 +1018,14 @@ function CreateListing() {
             </label>
 
             <label className="form-field">
-              <span>House rules</span>
+              <span>{t('createListing.houseRulesLabel', 'House rules')}</span>
               <textarea
                 name="house_rules"
                 rows="3"
-                placeholder="No smoking, quiet hours, etc."
+                placeholder={t(
+                  'createListing.houseRulesPlaceholder',
+                  'No smoking, quiet hours, etc.',
+                )}
                 value={form.house_rules}
                 onChange={handleChange}
               />
@@ -960,10 +1042,12 @@ function CreateListing() {
               onClick={() => navigate(-1)}
               disabled={submitting}
             >
-              Cancel
+              {t('createListing.cancel', 'Cancel')}
             </button>
             <button type="submit" className="primary-button" disabled={submitting}>
-              {submitting ? 'Saving...' : 'Publish listing'}
+              {submitting
+                ? t('createListing.saving', 'Saving...')
+                : t('createListing.publish', 'Publish listing')}
             </button>
           </div>
         </form>

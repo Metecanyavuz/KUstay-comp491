@@ -34,17 +34,17 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const formatPrice = (value) => {
+const formatPrice = (value, perMonthLabel = '₺/month') => {
   if (value === null || value === undefined || value === '') {
     return '—';
   }
 
   const numericValue = Number(value);
   if (Number.isNaN(numericValue)) {
-    return `${value} ₺/month`;
+    return `${value} ${perMonthLabel}`;
   }
 
-  return `${numericValue.toLocaleString('tr-TR')} ₺/month`;
+  return `${numericValue.toLocaleString('tr-TR')} ${perMonthLabel}`;
 };
 
 const formatDate = (value, locale = 'en-US', fallback = 'Flexible move-in') => {
@@ -103,6 +103,8 @@ function ListingDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useI18n();
+  const locale = t('listings.locale', 'en-US');
+  const perMonthLabel = t('currency.perMonth', '₺/month');
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -121,6 +123,27 @@ function ListingDetail() {
       private: t('listings.privateRoom', 'Private Room'),
       shared: t('listings.sharedRoom', 'Shared Room'),
       entire_place: t('listings.entirePlace', 'Entire Place'),
+    }),
+    [t],
+  );
+  const amenityLabels = useMemo(
+    () => ({
+      'Wi-Fi Included': t('amenities.wifi', 'Wi-Fi Included'),
+      'Utilities Included': t('amenities.utilities', 'Utilities Included'),
+      'Washer/Dryer': t('amenities.washerDryer', 'Washer/Dryer'),
+      'Parking Spot': t('amenities.parking', 'Parking Spot'),
+      'Pet Friendly': t('amenities.petFriendly', 'Pet Friendly'),
+      'Air Conditioning': t('amenities.ac', 'Air Conditioning'),
+      Furnished: t('amenities.furnished', 'Furnished'),
+      'Gym Access': t('amenities.gym', 'Gym Access'),
+    }),
+    [t],
+  );
+  const reviewStatusLabels = useMemo(
+    () => ({
+      pending: t('reviews.statusPending', 'Pending'),
+      approved: t('reviews.statusApproved', 'Approved'),
+      rejected: t('reviews.statusRejected', 'Rejected'),
     }),
     [t],
   );
@@ -151,7 +174,7 @@ function ListingDetail() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to load listing');
+          throw new Error(t('listingDetail.loadError', 'Unable to load this listing right now.'));
         }
 
         const data = await response.json();
@@ -159,7 +182,7 @@ function ListingDetail() {
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error(err);
-          setError('Unable to load this listing right now.');
+          setError(t('listingDetail.loadError', 'Unable to load this listing right now.'));
         }
       } finally {
         setLoading(false);
@@ -189,7 +212,7 @@ function ListingDetail() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to load reviews');
+          throw new Error(t('listingDetail.reviewsLoadError', 'Unable to load reviews right now.'));
         }
 
         const data = await response.json();
@@ -202,7 +225,7 @@ function ListingDetail() {
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error(err);
-          setReviewsError('Unable to load reviews right now.');
+          setReviewsError(t('listingDetail.reviewsLoadError', 'Unable to load reviews right now.'));
         }
       } finally {
         setReviewsLoading(false);
@@ -264,8 +287,9 @@ function ListingDetail() {
       ? '—'
       : reviewSummary.average.toFixed(1);
 
-  const existingStatusLabel = existingReview?.moderation_status
-    ? existingReview.moderation_status.replace('_', ' ')
+  const existingStatusKey = existingReview?.moderation_status;
+  const existingStatusLabel = existingStatusKey
+    ? reviewStatusLabels[existingStatusKey] || existingStatusKey.replace('_', ' ')
     : '';
 
   useEffect(() => {
@@ -317,7 +341,7 @@ function ListingDetail() {
     setReviewNotice('');
 
     if (!rating) {
-      setReviewNotice('Please select a rating.');
+      setReviewNotice(t('listingDetail.reviewRatingRequired', 'Please select a rating.'));
       return;
     }
 
@@ -339,17 +363,19 @@ function ListingDetail() {
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || 'Unable to submit review.');
+        throw new Error(
+          data.error || t('listingDetail.reviewSubmitError', 'Unable to submit review.'),
+        );
       }
 
       const data = await response.json();
       setExistingReview(data);
       setRating(0);
       setComment('');
-      setReviewNotice('Thanks! Your review is pending approval.');
+      setReviewNotice(t('listingDetail.reviewThanks', 'Thanks! Your review is pending approval.'));
     } catch (err) {
       console.error(err);
-      setReviewNotice(err.message || 'Unable to submit review.');
+      setReviewNotice(err.message || t('listingDetail.reviewSubmitError', 'Unable to submit review.'));
     } finally {
       setReviewSubmitting(false);
     }
@@ -376,12 +402,12 @@ function ListingDetail() {
         },
       });
       if (!response.ok) {
-        throw new Error('Silme işlemi başarısız oldu.');
+        throw new Error(t('listingDetail.deleteError', 'Unable to delete listing.'));
       }
       navigate('/listings');
     } catch (err) {
       console.error(err);
-      setDeleteError(err.message || 'Silme işlemi başarısız oldu.');
+      setDeleteError(err.message || t('listingDetail.deleteError', 'Unable to delete listing.'));
     } finally {
       setDeleting(false);
       setShowConfirm(false);
@@ -399,17 +425,17 @@ function ListingDetail() {
             onClick={() => navigate(-1)}
           >
             <ArrowLeft size={16} />
-            Back
+            {t('listingDetail.back', 'Back')}
           </button>
           <Link to="/listings" className="ghost-button secondary">
-            Browse listings
+            {t('listingDetail.browse', 'Browse listings')}
           </Link>
           {isOwner && (
             <Link
               to={`/listings/${listingId}/edit`}
               className="ghost-button secondary"
             >
-              Edit listing
+              {t('listingDetail.edit', 'Edit listing')}
             </Link>
           )}
           {isOwner && (
@@ -419,7 +445,9 @@ function ListingDetail() {
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? 'Deleting…' : 'Delete listing'}
+              {deleting
+                ? t('listingDetail.deleting', 'Deleting…')
+                : t('listingDetail.delete', 'Delete listing')}
             </button>
           )}
           
@@ -438,13 +466,13 @@ function ListingDetail() {
         {loading ? (
           <div className="detail-loading">
             <Loader size={26} />
-            <p>Loading listing...</p>
+            <p>{t('listingDetail.loading', 'Loading listing...')}</p>
           </div>
         ) : error ? (
           <div className="detail-error">
             <p>{error}</p>
             <Link to="/listings" className="ghost-button secondary">
-              Return to listings
+              {t('listingDetail.return', 'Return to listings')}
             </Link>
           </div>
         ) : listing ? (
@@ -473,24 +501,31 @@ function ListingDetail() {
 
               <div className="hero-content">
                 <div className="hero-text">
-                  <p className="eyebrow">Listing</p>
+                  <p className="eyebrow">{t('listingDetail.eyebrow', 'Listing')}</p>
                   <h1>{listing.title}</h1>
                   <p className="location">
                     <MapPin size={18} />
                     <span>
                       {listing.neighborhood ||
                         listing.address ||
-                        'Location shared on request'}
+                        t('listingDetail.locationFallback', 'Location shared on request')}
                     </span>
                   </p>
                 </div>
 
                 <div className="price-card">
-                  <p className="label">Monthly rent</p>
-                  <p className="price">{formatPrice(listing.rent_amount)}</p>
+                  <p className="label">{t('listingDetail.monthlyRent', 'Monthly rent')}</p>
+                  <p className="price">{formatPrice(listing.rent_amount, perMonthLabel)}</p>
                   <div className="availability">
                     <Calendar size={16} />
-                    <span>Available {formatDate(listing.available_from)}</span>
+                    <span>
+                      {t('listingDetail.availablePrefix', 'Available')}{' '}
+                      {formatDate(
+                        listing.available_from,
+                        locale,
+                        t('listings.flexible', 'Flexible move-in'),
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -500,7 +535,7 @@ function ListingDetail() {
               {galleryImages.length > 0 && (
                 <section className="panel gallery">
                   <div className="panel-header">
-                    <h3>Gallery</h3>
+                    <h3>{t('listingDetail.gallery', 'Gallery')}</h3>
                   </div>
                   <div className="gallery-grid">
                     {galleryImages.map((url, index) => (
@@ -510,7 +545,7 @@ function ListingDetail() {
                         className="gallery-image-button"
                         onClick={() => openLightbox(primaryImage ? index + 1 : index)}
                       >
-                        <img src={url} alt="Listing" />
+                        <img src={url} alt={t('listingDetail.lightboxAlt', 'Listing')} />
                       </button>
                     ))}
                   </div>
@@ -519,22 +554,23 @@ function ListingDetail() {
 
               <section className="panel description">
                 <div className="panel-header">
-                  <h2>About this place</h2>
+                  <h2>{t('listingDetail.aboutTitle', 'About this place')}</h2>
                 </div>
                 <p className="body-text">
-                  {listing.description || 'No description provided yet.'}
+                  {listing.description ||
+                    t('listingDetail.noDescription', 'No description provided yet.')}
                 </p>
               </section>
 
               <section className="panel">
                 <div className="panel-header">
-                  <h3>Quick facts</h3>
+                  <h3>{t('listingDetail.quickFacts', 'Quick facts')}</h3>
                 </div>
                 <div className="facts-grid">
                   <div className="fact">
                     <Home size={18} />
                     <div>
-                      <p className="label">Listing type</p>
+                      <p className="label">{t('listingDetail.listingType', 'Listing type')}</p>
                       <p>
                         {listingTypeLabels[listing.listing_type] ||
                           listing.listing_type}
@@ -544,24 +580,31 @@ function ListingDetail() {
                   <div className="fact">
                     <BedDouble size={18} />
                     <div>
-                      <p className="label">Room type</p>
-                      <p>{roomTypeLabels[listing.room_type] || 'N/A'}</p>
+                      <p className="label">{t('listingDetail.roomType', 'Room type')}</p>
+                      <p>{roomTypeLabels[listing.room_type] || t('general.notAvailable', 'N/A')}</p>
                     </div>
                   </div>
                   <div className="fact">
                     <Users size={18} />
                     <div>
-                      <p className="label">Rooms</p>
+                      <p className="label">{t('listingDetail.rooms', 'Rooms')}</p>
                       <p>
-                        {listing.available_rooms} / {listing.total_rooms} available
+                        {listing.available_rooms} / {listing.total_rooms}{' '}
+                        {t('listingDetail.roomsAvailableSuffix', 'available')}
                       </p>
                     </div>
                   </div>
                   <div className="fact">
                     <Calendar size={18} />
                     <div>
-                      <p className="label">Move-in</p>
-                      <p>{formatDate(listing.available_from)}</p>
+                      <p className="label">{t('listingDetail.moveIn', 'Move-in')}</p>
+                      <p>
+                        {formatDate(
+                          listing.available_from,
+                          locale,
+                          t('listings.flexible', 'Flexible move-in'),
+                        )}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -569,24 +612,26 @@ function ListingDetail() {
 
               <section className="panel">
                 <div className="panel-header">
-                  <h3>Amenities</h3>
+                  <h3>{t('listingDetail.amenities', 'Amenities')}</h3>
                 </div>
                 {amenities.length ? (
                   <div className="pill-list">
                     {amenities.map((amenity) => (
                       <span key={amenity} className="pill">
-                        {amenity}
+                        {amenityLabels[amenity] || amenity}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="muted">No amenities listed for this place yet.</p>
+                  <p className="muted">
+                    {t('listingDetail.amenitiesEmpty', 'No amenities listed for this place yet.')}
+                  </p>
                 )}
               </section>
 
               <section className="panel">
                 <div className="panel-header">
-                  <h3>House rules</h3>
+                  <h3>{t('listingDetail.houseRules', 'House rules')}</h3>
                 </div>
                 {houseRules.length ? (
                   <ul className="rules-list">
@@ -595,21 +640,23 @@ function ListingDetail() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="muted">No house rules provided.</p>
+                  <p className="muted">
+                    {t('listingDetail.houseRulesEmpty', 'No house rules provided.')}
+                  </p>
                 )}
               </section>
 
               {listingCoords && (
                 <section className="panel location-panel">
                   <div className="panel-header">
-                    <h3>Location</h3>
+                    <h3>{t('listingDetail.location', 'Location')}</h3>
                   </div>
                   <p className="location-text">
                     <MapPin size={16} />
                     <span>
                       {listing.neighborhood ||
                         listing.address ||
-                        'Location shared on request'}
+                        t('listingDetail.locationFallback', 'Location shared on request')}
                     </span>
                   </p>
                   <div className="detail-map">
@@ -633,11 +680,15 @@ function ListingDetail() {
             <section className="panel reviews-panel">
               <div className="panel-header reviews-header">
                 <div>
-                  <h3>Ratings & comments</h3>
+                  <h3>{t('listingDetail.ratingsTitle', 'Ratings & comments')}</h3>
                   <p className="muted">
                     {reviewSummary.count
-                      ? `${reviewSummary.count} review${reviewSummary.count === 1 ? '' : 's'}`
-                      : 'No reviews yet'}
+                      ? `${reviewSummary.count} ${
+                          reviewSummary.count === 1
+                            ? t('listingDetail.reviewSingular', 'review')
+                            : t('listingDetail.reviewPlural', 'reviews')
+                        }`
+                      : t('listingDetail.noReviews', 'No reviews yet')}
                   </p>
                 </div>
                 <div className="review-summary">
@@ -647,7 +698,7 @@ function ListingDetail() {
               </div>
 
               {reviewsLoading ? (
-                <p className="muted">Loading reviews...</p>
+                <p className="muted">{t('listingDetail.reviewsLoading', 'Loading reviews...')}</p>
               ) : reviewsError ? (
                 <p className="muted">{reviewsError}</p>
               ) : reviews.length ? (
@@ -659,9 +710,9 @@ function ListingDetail() {
                           <p className="reviewer-name">
                             {review.reviewer?.first_name || review.reviewer?.last_name
                               ? `${review.reviewer?.first_name || ''} ${review.reviewer?.last_name || ''}`.trim()
-                              : review.reviewer?.email || 'User'}
+                              : review.reviewer?.email || t('listingDetail.anonymousUser', 'User')}
                           </p>
-                          <p className="muted">{formatReviewDate(review.created_at)}</p>
+                          <p className="muted">{formatReviewDate(review.created_at, locale)}</p>
                         </div>
                         <div className="star-row">{renderStars(review.rating)}</div>
                       </div>
@@ -670,19 +721,25 @@ function ListingDetail() {
                   ))}
                 </div>
               ) : (
-                <p className="muted">No reviews yet.</p>
+                <p className="muted">{t('listingDetail.noReviews', 'No reviews yet')}</p>
               )}
 
               {user ? (
                 isOwner ? (
-                  <p className="muted">You cannot review your own listing.</p>
+                  <p className="muted">
+                    {t('listingDetail.reviewOwnerNotice', 'You cannot review your own listing.')}
+                  </p>
                 ) : existingReview ? (
                   <div className="review-existing">
                     <div className="review-header">
                       <div>
-                        <p className="reviewer-name">Your review</p>
+                        <p className="reviewer-name">
+                          {t('listingDetail.yourReview', 'Your review')}
+                        </p>
                         {existingStatusLabel && (
-                          <p className="muted">Status: {existingStatusLabel}</p>
+                          <p className="muted">
+                            {t('listingDetail.reviewStatus', 'Status')}: {existingStatusLabel}
+                          </p>
                         )}
                       </div>
                       <div className="star-row">{renderStars(existingReview.rating)}</div>
@@ -700,13 +757,13 @@ function ListingDetail() {
                           key={value}
                           className={`star-button ${rating >= value ? 'active' : ''}`}
                           onClick={() => setRating(value)}
-                          aria-label={`${value} stars`}
+                          aria-label={`${value} ${t('listingDetail.starsLabel', 'stars')}`}
                         >
                           <Star size={22} />
                         </button>
                       ))}
                       <span className="rating-label">
-                        {rating ? `${rating} / 5` : 'Select rating'}
+                        {rating ? `${rating} / 5` : t('listingDetail.selectRating', 'Select rating')}
                       </span>
                     </div>
 
@@ -714,7 +771,7 @@ function ListingDetail() {
                       rows={3}
                       value={comment}
                       onChange={(event) => setComment(event.target.value)}
-                      placeholder="Share a comment (optional)"
+                      placeholder={t('listingDetail.reviewPlaceholder', 'Share a comment (optional)')}
                     />
 
                     <div className="review-actions">
@@ -723,24 +780,31 @@ function ListingDetail() {
                         className="ghost-button secondary"
                         disabled={reviewSubmitting}
                       >
-                        {reviewSubmitting ? 'Submitting…' : 'Submit review'}
+                        {reviewSubmitting
+                          ? t('listingDetail.reviewSubmitting', 'Submitting…')
+                          : t('listingDetail.reviewSubmit', 'Submit review')}
                       </button>
                       {reviewNotice && <p className="muted">{reviewNotice}</p>}
                     </div>
                   </form>
                 )
               ) : (
-                <p className="muted">Log in to leave a review.</p>
+                <p className="muted">
+                  {t('listingDetail.reviewLoginPrompt', 'Log in to leave a review.')}
+                </p>
               )}
             </section>
           </div>
 
-          {showConfirm && (
+              {showConfirm && (
               <div className="confirm-overlay">
                 <div className="confirm-modal">
-                  <h3>Delete listing?</h3>
+                  <h3>{t('listingDetail.confirmTitle', 'Delete listing?')}</h3>
                   <p>
-                    Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                    {t(
+                      'listingDetail.confirmBody',
+                      'Are you sure you want to delete this listing? This action cannot be undone.',
+                    )}
                   </p>
                   <div className="confirm-actions">
                     <button
@@ -749,7 +813,7 @@ function ListingDetail() {
                       onClick={() => setShowConfirm(false)}
                       disabled={deleting}
                     >
-                      Vazgeç
+                      {t('listingDetail.confirmCancel', 'Cancel')}
                     </button>
                     <button
                       type="button"
@@ -757,7 +821,9 @@ function ListingDetail() {
                       onClick={confirmDelete}
                       disabled={deleting}
                     >
-                      {deleting ? 'Siliniyor…' : 'Evet, sil'}
+                      {deleting
+                        ? t('listingDetail.confirmDeleting', 'Deleting…')
+                        : t('listingDetail.confirmDelete', 'Yes, delete')}
                     </button>
                   </div>
                 </div>
@@ -774,7 +840,7 @@ function ListingDetail() {
               type="button"
               className="lightbox-close"
               onClick={closeLightbox}
-              aria-label="Close"
+              aria-label={t('listingDetail.lightboxClose', 'Close')}
             >
               X
             </button>
@@ -784,7 +850,7 @@ function ListingDetail() {
                   type="button"
                   className="lightbox-nav prev"
                   onClick={showPrev}
-                  aria-label="Previous"
+                  aria-label={t('listingDetail.lightboxPrev', 'Previous')}
                 >
                   &lt;
                 </button>
@@ -792,7 +858,7 @@ function ListingDetail() {
                   type="button"
                   className="lightbox-nav next"
                   onClick={showNext}
-                  aria-label="Next"
+                  aria-label={t('listingDetail.lightboxNext', 'Next')}
                 >
                   &gt;
                 </button>
@@ -800,7 +866,7 @@ function ListingDetail() {
             )}
             <img
               src={lightboxImages[lightboxIndex]}
-              alt="Listing"
+              alt={t('listingDetail.lightboxAlt', 'Listing')}
               className="lightbox-image"
             />
           </div>

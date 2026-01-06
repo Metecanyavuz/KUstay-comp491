@@ -9,6 +9,7 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { useAuth } from '../../context/AuthContext';
 import { getCSRFToken } from '../../utils/csrf';
 import { AMENITY_OPTIONS } from '../../data/amenities';
+import { useI18n } from '../../context/I18nContext';
 import '../CreateListing/CreateListing.css';
 import './EditListing.css';
 
@@ -45,19 +46,7 @@ const defaultForm = {
   is_active: true,
 };
 
-const LISTING_TYPE_OPTIONS = [
-  { value: 'apartment', label: 'Apartment' },
-  { value: 'house', label: 'House' },
-  { value: 'room', label: 'Room' },
-];
-
-const ROOM_TYPE_OPTIONS = [
-  { value: 'private', label: 'Private Room' },
-  { value: 'shared', label: 'Shared Room' },
-  { value: 'entire_place', label: 'Entire Place' },
-];
-
-const OTHER_AMENITY_LABEL = 'Other';
+const OTHER_AMENITY_VALUE = 'Other';
 
 const parseAddressParts = (address) => {
   if (!address) {
@@ -93,6 +82,32 @@ function EditListing() {
   const { listingId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useI18n();
+
+  const listingTypeOptions = [
+    { value: 'apartment', label: t('listings.apartment', 'Apartment') },
+    { value: 'house', label: t('listings.house', 'House') },
+    { value: 'room', label: t('listings.room', 'Room') },
+  ];
+
+  const roomTypeOptions = [
+    { value: 'private', label: t('listings.privateRoom', 'Private Room') },
+    { value: 'shared', label: t('listings.sharedRoom', 'Shared Room') },
+    { value: 'entire_place', label: t('listings.entirePlace', 'Entire Place') },
+  ];
+
+  const amenityLabels = {
+    'Wi-Fi Included': t('amenities.wifi', 'Wi-Fi Included'),
+    'Utilities Included': t('amenities.utilities', 'Utilities Included'),
+    'Washer/Dryer': t('amenities.washerDryer', 'Washer/Dryer'),
+    'Parking Spot': t('amenities.parking', 'Parking Spot'),
+    'Pet Friendly': t('amenities.petFriendly', 'Pet Friendly'),
+    'Air Conditioning': t('amenities.ac', 'Air Conditioning'),
+    Furnished: t('amenities.furnished', 'Furnished'),
+    'Gym Access': t('amenities.gym', 'Gym Access'),
+  };
+
+  const otherAmenityLabel = t('createListing.amenityOther', 'Other');
 
   const [listing, setListing] = useState(null);
   const [form, setForm] = useState(defaultForm);
@@ -132,7 +147,7 @@ function EditListing() {
           signal: controller.signal,
         });
         if (!response.ok) {
-          throw new Error('Failed to load listing');
+          throw new Error(t('editListing.loadError', 'Unable to load this listing right now.'));
         }
         const data = await response.json();
         setListing(data);
@@ -161,7 +176,7 @@ function EditListing() {
           total_rooms: data.total_rooms ?? 1,
           available_rooms: data.available_rooms ?? 1,
           amenities: customAmenities.length
-            ? [...standardAmenities, OTHER_AMENITY_LABEL]
+            ? [...standardAmenities, OTHER_AMENITY_VALUE]
             : standardAmenities,
           amenity_other: customAmenities.join(', '),
           house_rules: data.house_rules || '',
@@ -178,7 +193,7 @@ function EditListing() {
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error(err);
-          setLoadError('Unable to load this listing right now.');
+          setLoadError(t('editListing.loadError', 'Unable to load this listing right now.'));
         }
       } finally {
         setLoading(false);
@@ -201,7 +216,7 @@ function EditListing() {
           credentials: 'include',
         });
         if (!response.ok) {
-          throw new Error('Unable to load provinces right now.');
+          throw new Error(t('createListing.provinceLoadError', 'Unable to load provinces right now.'));
         }
         const data = await response.json();
         const items = Array.isArray(data) ? data : data?.data || [];
@@ -209,7 +224,12 @@ function EditListing() {
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error(err);
-          setLocationError('Şehir verisi alınamadı. Lütfen manuel girin veya tekrar deneyin.');
+          setLocationError(
+            t(
+              'createListing.cityLoadError',
+              'Unable to load cities. Please enter manually or try again.',
+            ),
+          );
         }
       } finally {
         setLocationLoading(false);
@@ -453,7 +473,7 @@ function EditListing() {
         { credentials: 'include' },
       );
       if (!response.ok) {
-        throw new Error('Mahalleler alınamadı');
+        throw new Error(t('createListing.neighborhoodLoadError', 'Unable to load neighborhoods.'));
       }
       const data = await response.json();
       let items = Array.isArray(data) ? data : data?.data || [];
@@ -474,7 +494,12 @@ function EditListing() {
       }
     } catch (err) {
       console.error(err);
-      setLocationError('Mahalle listesi yüklenemedi, elle yazabilirsiniz.');
+      setLocationError(
+        t(
+          'createListing.neighborhoodLoadErrorDetail',
+          'Neighborhood list failed to load; you can type manually.',
+        ),
+      );
       setNeighborhoodOptions([]);
     } finally {
       setNeighborhoodLoading(false);
@@ -499,7 +524,7 @@ function EditListing() {
         credentials: 'include',
       });
       if (!response.ok) {
-        throw new Error('Sokaklar alınamadı');
+        throw new Error(t('createListing.streetLoadError', 'Unable to load streets.'));
       }
       const data = await response.json();
       let items = Array.isArray(data) ? data : data?.data || [];
@@ -515,7 +540,7 @@ function EditListing() {
       }
     } catch (err) {
       console.error(err);
-      setStreetError('Sokak listesi yüklenemedi.');
+      setStreetError(t('createListing.streetLoadErrorDetail', 'Could not load streets.'));
       setStreetOptions([]);
     } finally {
       setStreetLoading(false);
@@ -565,7 +590,7 @@ function EditListing() {
       return {
         ...prev,
         amenities: nextAmenities,
-        amenity_other: amenity === OTHER_AMENITY_LABEL && hasAmenity ? '' : prev.amenity_other,
+        amenity_other: amenity === OTHER_AMENITY_VALUE && hasAmenity ? '' : prev.amenity_other,
       };
     });
   };
@@ -590,18 +615,33 @@ function EditListing() {
       }
       const results = await response.json();
       if (!Array.isArray(results) || results.length === 0) {
-        setGeocodeWarning('Adres konumu bulunamadı; koordinatlar olmadan kaydedilecek.');
+        setGeocodeWarning(
+          t(
+            'createListing.geocodeNotFound',
+            'Address location not found; it will be saved without coordinates.',
+          ),
+        );
         return null;
       }
       const { lat, lon } = results[0];
       if (lat && lon) {
         return { lat: Number(round6(lat)), lng: Number(round6(lon)) };
       }
-      setGeocodeWarning('Adres konumu bulunamadı; koordinatlar olmadan kaydedilecek.');
+      setGeocodeWarning(
+        t(
+          'createListing.geocodeNotFound',
+          'Address location not found; it will be saved without coordinates.',
+        ),
+      );
       return null;
     } catch (error) {
       console.warn('Geocoding failed', error);
-      setGeocodeWarning('Konum doğrulama başarısız; koordinatlar olmadan kaydedilecek.');
+      setGeocodeWarning(
+        t(
+          'createListing.geocodeFailed',
+          'Location validation failed; it will be saved without coordinates.',
+        ),
+      );
       return null;
     }
   };
@@ -612,17 +652,17 @@ function EditListing() {
     setGeocodeWarning('');
 
     if (!isOwner) {
-      setError('You can only edit your own listing.');
+      setError(t('editListing.ownerError', 'You can only edit your own listing.'));
       return;
     }
 
     if (!form.title.trim() || !form.description.trim() || !form.address.trim()) {
-      setError('Title, description, and address are required.');
+      setError(t('createListing.errorRequired', 'Title, description, and address are required.'));
       return;
     }
 
     if (!form.rent_amount) {
-      setError('Please add a monthly rent amount.');
+      setError(t('createListing.errorRent', 'Please add a monthly rent amount.'));
       return;
     }
 
@@ -633,7 +673,7 @@ function EditListing() {
     const addressDetail = form.address_detail.trim();
 
     if (!city || !district) {
-      setError('Please enter your city and district.');
+      setError(t('createListing.errorCityDistrict', 'Please enter your city and district.'));
       return;
     }
 
@@ -645,10 +685,10 @@ function EditListing() {
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean);
-    const hasOtherAmenity = selectedAmenities.includes(OTHER_AMENITY_LABEL);
+    const hasOtherAmenity = selectedAmenities.includes(OTHER_AMENITY_VALUE);
     const otherAmenity = form.amenity_other.trim();
     const combinedAmenities = selectedAmenities.filter(
-      (item) => item !== OTHER_AMENITY_LABEL,
+      (item) => item !== OTHER_AMENITY_VALUE,
     );
     if (hasOtherAmenity && otherAmenity) {
       const extraAmenities = otherAmenity
@@ -721,7 +761,10 @@ function EditListing() {
       });
 
       if (!response.ok) {
-        let message = 'Could not update listing. Please check your info and try again.';
+        let message = t(
+          'editListing.errorSave',
+          'Could not update listing. Please check your info and try again.',
+        );
         try {
           const data = await response.json();
           if (data?.detail) {
@@ -753,32 +796,34 @@ function EditListing() {
       <div className="create-listing-shell">
         <header className="create-listing-header">
           <div>
-            <p className="eyebrow">Update your listing</p>
-            <h1>Edit listing</h1>
-            <p className="lede">Make changes and keep your listing up to date.</p>
+            <p className="eyebrow">{t('editListing.eyebrow', 'Update your listing')}</p>
+            <h1>{t('editListing.title', 'Edit listing')}</h1>
+            <p className="lede">
+              {t('editListing.lede', 'Make changes and keep your listing up to date.')}
+            </p>
           </div>
           <Link to={`/listings/${listingId}`} className="ghost-button secondary">
-            Back to listing
+            {t('editListing.backToListing', 'Back to listing')}
           </Link>
         </header>
 
         {loading ? (
           <div className="detail-loading">
             <Loader size={26} />
-            <p>Loading listing...</p>
+            <p>{t('editListing.loading', 'Loading listing...')}</p>
           </div>
         ) : loadError ? (
           <div className="detail-error">
             <p>{loadError}</p>
             <button type="button" className="ghost-button" onClick={() => navigate('/listings')}>
-              Back to listings
+              {t('createListing.backToListings', 'Back to listings')}
             </button>
           </div>
         ) : !isOwner ? (
           <div className="detail-error">
-            <p>You can only edit your own listing.</p>
+            <p>{t('editListing.ownerError', 'You can only edit your own listing.')}</p>
             <Link to={`/listings/${listingId}`} className="ghost-button secondary">
-              Back to listing
+              {t('editListing.backToListing', 'Back to listing')}
             </Link>
           </div>
         ) : (
@@ -786,16 +831,16 @@ function EditListing() {
             <section className="form-panel">
               <div className="panel-header">
                 <Home size={18} />
-                <h2>Listing basics</h2>
+                <h2>{t('createListing.sectionBasics', 'Listing basics')}</h2>
               </div>
 
               <div className="form-grid">
                 <label className="form-field">
-                  <span>Title *</span>
+                  <span>{t('createListing.titleLabel', 'Title *')}</span>
                   <input
                     name="title"
                     type="text"
-                    placeholder="Cozy 2+1 near campus"
+                    placeholder={t('createListing.titlePlaceholder', 'Cozy 2+1 near campus')}
                     value={form.title}
                     onChange={handleChange}
                     required
@@ -803,13 +848,13 @@ function EditListing() {
                 </label>
 
                 <label className="form-field">
-                  <span>Listing type</span>
+                  <span>{t('createListing.listingTypeLabel', 'Listing type')}</span>
                   <select
                     name="listing_type"
                     value={form.listing_type}
                     onChange={handleChange}
                   >
-                    {LISTING_TYPE_OPTIONS.map((option) => (
+                    {listingTypeOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -818,13 +863,13 @@ function EditListing() {
                 </label>
 
                 <label className="form-field">
-                  <span>Room type</span>
+                  <span>{t('createListing.roomTypeLabel', 'Room type')}</span>
                   <select
                     name="room_type"
                     value={form.room_type}
                     onChange={handleChange}
                   >
-                    {ROOM_TYPE_OPTIONS.map((option) => (
+                    {roomTypeOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -833,13 +878,13 @@ function EditListing() {
                 </label>
 
                 <label className="form-field">
-                  <span>Monthly rent (₺) *</span>
+                  <span>{t('createListing.monthlyRentLabel', 'Monthly rent (₺) *')}</span>
                   <input
                     name="rent_amount"
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="7500"
+                    placeholder={t('createListing.rentPlaceholder', '7500')}
                     value={form.rent_amount}
                     onChange={handleChange}
                     required
@@ -847,7 +892,7 @@ function EditListing() {
                 </label>
 
                 <label className="form-field">
-                  <span>Available from</span>
+                  <span>{t('createListing.availableFromLabel', 'Available from')}</span>
                   <div className="input-with-icon">
                     <Calendar size={16} />
                     <input
@@ -860,11 +905,11 @@ function EditListing() {
                 </label>
 
                 <label className="form-field">
-                  <span>Cover image (optional)</span>
+                  <span>{t('createListing.coverImageLabel', 'Cover image (optional)')}</span>
                   {currentImage && (
                     <div className="current-image">
                       <img src={currentImage} alt="Current listing" />
-                      <span>Current image</span>
+                      <span>{t('editListing.currentImage', 'Current image')}</span>
                     </div>
                   )}
                   <input
@@ -876,7 +921,7 @@ function EditListing() {
                 </label>
 
                 <label className="form-field">
-                  <span>Additional photos (optional)</span>
+                  <span>{t('createListing.additionalPhotosLabel', 'Additional photos (optional)')}</span>
                   <input
                     name="images"
                     type="file"
@@ -886,18 +931,23 @@ function EditListing() {
                     onChange={handleGalleryChange}
                   />
                   <small className="form-hint">
-                    Select multiple images or add more after the first pick.
+                    {t(
+                      'createListing.additionalPhotosHint',
+                      'Select multiple images or add more after the first pick.',
+                    )}
                   </small>
                   {galleryFiles.length > 0 && (
                     <div className="file-list">
                       <div className="file-list-header">
-                        <span>{galleryFiles.length} selected</span>
+                        <span>
+                          {galleryFiles.length} {t('createListing.filesSelected', 'selected')}
+                        </span>
                         <button
                           type="button"
                           className="ghost-button"
                           onClick={handleGalleryClear}
                         >
-                          Clear
+                          {t('createListing.clear', 'Clear')}
                         </button>
                       </div>
                       <div className="file-chips">
@@ -910,7 +960,7 @@ function EditListing() {
                             <button
                               type="button"
                               onClick={() => handleGalleryRemove(index)}
-                              aria-label={`Remove ${file.name}`}
+                              aria-label={`${t('createListing.removeFile', 'Remove')} ${file.name}`}
                             >
                               ×
                             </button>
@@ -922,7 +972,7 @@ function EditListing() {
                 </label>
 
                 <div className="form-field">
-                  <span>Listing status</span>
+                  <span>{t('editListing.statusLabel', 'Listing status')}</span>
                   <label className="checkbox-field">
                     <input
                       name="is_active"
@@ -930,7 +980,7 @@ function EditListing() {
                       checked={form.is_active}
                       onChange={handleChange}
                     />
-                    Active (visible in listings)
+                    {t('editListing.statusActive', 'Active (visible in listings)')}
                   </label>
                 </div>
               </div>
@@ -939,31 +989,35 @@ function EditListing() {
             <section className="form-panel">
               <div className="panel-header">
                 <MapPin size={18} />
-                <h2>Location</h2>
+                <h2>{t('createListing.sectionLocation', 'Location')}</h2>
               </div>
 
               <div className="form-grid two">
                 <label className="form-field">
-                  <span>İl *</span>
+                  <span>{t('createListing.cityLabel', 'City *')}</span>
                   <select
                     name="city"
                     value={form.city}
                     onChange={(event) => handleCityChange(event.target.value)}
                     required
                   >
-                    <option value="">İl seçin</option>
+                    <option value="">{t('createListing.citySelect', 'Select city')}</option>
                     {provinceData.map((province) => (
                       <option key={province.id || province.name} value={province.name}>
                         {province.name}
                       </option>
                     ))}
                   </select>
-                  {locationLoading && <small className="form-hint">Şehirler yükleniyor…</small>}
+                  {locationLoading && (
+                    <small className="form-hint">
+                      {t('createListing.cityLoading', 'Cities are loading...')}
+                    </small>
+                  )}
                   {locationError && <small className="form-error inline">{locationError}</small>}
                 </label>
 
                 <label className="form-field">
-                  <span>İlçe *</span>
+                  <span>{t('createListing.districtLabel', 'District *')}</span>
                   <select
                     name="district"
                     value={form.district}
@@ -971,7 +1025,7 @@ function EditListing() {
                     required
                     disabled={!form.city}
                   >
-                    <option value="">İlçe seçin</option>
+                    <option value="">{t('createListing.districtSelect', 'Select district')}</option>
                     {districtOptions.map((district) => (
                       <option
                         key={district.id || district._id || district.name}
@@ -986,14 +1040,14 @@ function EditListing() {
 
               <div className="form-grid two">
                 <label className="form-field">
-                  <span>Mahalle</span>
+                  <span>{t('createListing.neighborhoodLabel', 'Neighborhood')}</span>
                   <select
                     name="neighborhood"
                     value={form.neighborhood}
                     onChange={(event) => handleNeighborhoodChange(event.target.value)}
                     disabled={!form.district}
                   >
-                    <option value="">Mahalle seçin</option>
+                    <option value="">{t('createListing.neighborhoodSelect', 'Select neighborhood')}</option>
                     {neighborhoodOptions.map((hood) => (
                       <option
                         key={hood.id || hood._id || hood.name || hood}
@@ -1004,12 +1058,14 @@ function EditListing() {
                     ))}
                   </select>
                   {neighborhoodLoading && (
-                    <small className="form-hint">Mahalleler yükleniyor…</small>
+                    <small className="form-hint">
+                      {t('createListing.neighborhoodLoading', 'Neighborhoods are loading...')}
+                    </small>
                   )}
                 </label>
 
                 <label className="form-field">
-                  <span>Sokak *</span>
+                  <span>{t('createListing.streetLabel', 'Street *')}</span>
                   <select
                     name="address"
                     value={form.address}
@@ -1017,7 +1073,7 @@ function EditListing() {
                     disabled={!selectedNeighborhoodId || streetLoading}
                     required
                   >
-                    <option value="">Sokak seçin</option>
+                    <option value="">{t('createListing.streetSelect', 'Select street')}</option>
                     {streetOptions.map((street) => (
                       <option
                         key={street.id || street.sokak_id || street.name || street.sokak_adi}
@@ -1027,18 +1083,25 @@ function EditListing() {
                       </option>
                     ))}
                   </select>
-                  {streetLoading && <small className="form-hint">Sokaklar yükleniyor…</small>}
+                  {streetLoading && (
+                    <small className="form-hint">
+                      {t('createListing.streetLoading', 'Streets are loading...')}
+                    </small>
+                  )}
                   {streetError && <small className="form-error inline">{streetError}</small>}
                 </label>
               </div>
 
               <div className="form-grid two">
                 <label className="form-field">
-                  <span>Adres detayı (opsiyonel)</span>
+                  <span>{t('createListing.addressDetailLabel', 'Address detail (optional)')}</span>
                   <input
                     name="address_detail"
                     type="text"
-                    placeholder="Site adı, apartman no vb."
+                    placeholder={t(
+                      'createListing.addressDetailPlaceholder',
+                      'Site name, apartment no, etc.',
+                    )}
                     value={form.address_detail}
                     onChange={handleChange}
                   />
@@ -1047,8 +1110,13 @@ function EditListing() {
 
               <div className="map-picker">
                 <div className="map-header">
-                  <span>Konumu ince ayarla</span>
-                  <small>Adres bulunamazsa pini taşıyarak konumu seçin.</small>
+                  <span>{t('createListing.mapAdjustTitle', 'Fine-tune location')}</span>
+                  <small>
+                    {t(
+                      'createListing.mapAdjustHint',
+                      'If the address is not found, move the pin to select the location.',
+                    )}
+                  </small>
                 </div>
                 <MapContainer
                   center={mapCenter}
@@ -1075,12 +1143,12 @@ function EditListing() {
             <section className="form-panel">
               <div className="panel-header">
                 <PlusCircle size={18} />
-                <h2>Details</h2>
+                <h2>{t('createListing.sectionDetails', 'Details')}</h2>
               </div>
 
               <div className="form-grid three">
                 <label className="form-field">
-                  <span>Total rooms</span>
+                  <span>{t('createListing.totalRoomsLabel', 'Total rooms')}</span>
                   <input
                     name="total_rooms"
                     type="number"
@@ -1090,7 +1158,7 @@ function EditListing() {
                   />
                 </label>
                 <label className="form-field">
-                  <span>Available rooms</span>
+                  <span>{t('createListing.availableRoomsLabel', 'Available rooms')}</span>
                   <input
                     name="available_rooms"
                     type="number"
@@ -1100,9 +1168,9 @@ function EditListing() {
                   />
                 </label>
                 <div className="form-field amenity-field">
-                  <span>Amenities</span>
+                  <span>{t('createListing.amenitiesLabel', 'Amenities')}</span>
                   <div className="amenities-grid">
-                    {[...AMENITY_OPTIONS, OTHER_AMENITY_LABEL].map((amenity) => (
+                    {[...AMENITY_OPTIONS, OTHER_AMENITY_VALUE].map((amenity) => (
                       <button
                         key={amenity}
                         type="button"
@@ -1111,33 +1179,46 @@ function EditListing() {
                         }`}
                         onClick={() => handleAmenityToggle(amenity)}
                       >
-                        {amenity}
+                        {amenity === OTHER_AMENITY_VALUE ? otherAmenityLabel : amenityLabels[amenity] || amenity}
                       </button>
                     ))}
                   </div>
-                  <small className="form-hint">Select all that apply.</small>
+                  <small className="form-hint">
+                    {t('createListing.amenitiesHint', 'Select all that apply.')}
+                  </small>
                 </div>
-                {form.amenities.includes(OTHER_AMENITY_LABEL) && (
+                {form.amenities.includes(OTHER_AMENITY_VALUE) && (
                   <label className="form-field amenity-other">
-                    <span>Other amenities (optional)</span>
+                    <span>{t('createListing.otherAmenitiesLabel', 'Other amenities (optional)')}</span>
                     <input
                       name="amenity_other"
                       type="text"
-                      placeholder="e.g. Balcony, Dishwasher"
+                      placeholder={t(
+                        'createListing.otherAmenitiesPlaceholder',
+                        'e.g. Balcony, Dishwasher',
+                      )}
                       value={form.amenity_other}
                       onChange={handleChange}
                     />
-                    <small className="form-hint">Separate multiple items with commas.</small>
+                    <small className="form-hint">
+                      {t(
+                        'createListing.otherAmenitiesHint',
+                        'Separate multiple items with commas.',
+                      )}
+                    </small>
                   </label>
                 )}
               </div>
 
               <label className="form-field">
-                <span>Description *</span>
+                <span>{t('createListing.descriptionLabel', 'Description *')}</span>
                 <textarea
                   name="description"
                   rows="4"
-                  placeholder="Describe the place, nearby spots, roommates, etc."
+                  placeholder={t(
+                    'createListing.descriptionPlaceholder',
+                    'Describe the place, nearby spots, roommates, etc.',
+                  )}
                   value={form.description}
                   onChange={handleChange}
                   required
@@ -1146,11 +1227,14 @@ function EditListing() {
 
 
               <label className="form-field">
-                <span>House rules</span>
+                <span>{t('createListing.houseRulesLabel', 'House rules')}</span>
                 <textarea
                   name="house_rules"
                   rows="3"
-                  placeholder="No smoking, quiet hours, etc."
+                  placeholder={t(
+                    'createListing.houseRulesPlaceholder',
+                    'No smoking, quiet hours, etc.',
+                  )}
                   value={form.house_rules}
                   onChange={handleChange}
                 />
@@ -1167,10 +1251,12 @@ function EditListing() {
                 onClick={() => navigate(`/listings/${listingId}`)}
                 disabled={saving}
               >
-                Cancel
+                {t('createListing.cancel', 'Cancel')}
               </button>
               <button type="submit" className="primary-button" disabled={saving}>
-                {saving ? 'Saving...' : 'Save changes'}
+                {saving
+                  ? t('createListing.saving', 'Saving...')
+                  : t('editListing.saveChanges', 'Save changes')}
               </button>
             </div>
           </form>

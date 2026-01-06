@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useI18n } from '../../context/I18nContext';
 import {
   User,
   Mail,
@@ -31,6 +32,8 @@ import BlockedUsersTab from './BlockedUsersTab';
 
 function Profile() {
   const { user, checkAuth } = useAuth();
+  const { t } = useI18n();
+  const locale = t('general.locale', 'en-US');
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -86,6 +89,49 @@ function Profile() {
     return initials || user.email[0].toUpperCase();
   };
 
+  const getUserTypeLabel = () =>
+    user?.user_type === 'KU_Student'
+      ? t('profile.userTypeKu', 'KU Student')
+      : t('profile.userTypeExternal', 'External Student');
+
+  const getRoomTypeLabel = (value) => {
+    if (value === 'private') {
+      return t('profile.roomTypePrivate', 'Private Room');
+    }
+    if (value === 'shared') {
+      return t('profile.roomTypeShared', 'Shared Room');
+    }
+    if (value === 'entire_place') {
+      return t('profile.roomTypeEntire', 'Entire Place');
+    }
+    return value || t('general.notAvailable', 'Not available');
+  };
+
+  const getSleepScheduleLabel = (value) => {
+    if (value === 'early_bird') {
+      return t('profile.sleepEarlyBird', 'Early Bird');
+    }
+    if (value === 'night_owl') {
+      return t('profile.sleepNightOwl', 'Night Owl');
+    }
+    return t('profile.sleepFlexible', 'Flexible');
+  };
+
+  const getCleanlinessLabel = (value) => {
+    if (value === 'low') {
+      return t('profile.cleanlinessLow', 'Low');
+    }
+    if (value === 'medium') {
+      return t('profile.cleanlinessMedium', 'Medium');
+    }
+    if (value === 'high') {
+      return t('profile.cleanlinessHigh', 'High');
+    }
+    return value
+      ? value.charAt(0).toUpperCase() + value.slice(1)
+      : t('general.notAvailable', 'Not available');
+  };
+
   const renderAvatar = () => {
     const hasPreview = !!photoPreview;
     const hasPhotoUrl = formData.profile_photo_url && !photoError;
@@ -97,7 +143,7 @@ function Profile() {
         {hasPhoto ? (
           <img
             src={imageSrc}
-            alt="Profile"
+            alt={t('profile.photoAlt', 'Profile')}
             onError={() => {
               if (!hasPreview) {
                 setPhotoError(true);
@@ -150,14 +196,14 @@ function Profile() {
         setPhotoError(false);
         setIsEditing(false);
       } else if (response.status === 404) {
-        setError('Please complete your profile to continue');
+        setError(t('profile.completeProfile', 'Please complete your profile to continue'));
         setIsEditing(true);
       } else {
-        setError('Failed to load profile');
+        setError(t('profile.loadError', 'Failed to load profile'));
       }
     } catch (err) {
       console.error('Fetch profile error:', err);
-      setError('Please complete your profile to continue');
+      setError(t('profile.completeProfile', 'Please complete your profile to continue'));
       setIsEditing(true);
     } finally {
       setLoading(false);
@@ -200,7 +246,7 @@ function Profile() {
 
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError('Profile photo must be under 5MB.');
+      setError(t('profile.photoSizeError', 'Profile photo must be under 5MB.'));
       return;
     }
 
@@ -258,7 +304,7 @@ function Profile() {
         setPhotoFile(null);
         setPhotoPreview('');
         setPhotoError(false);
-        setSuccessMessage('Profile saved successfully!');
+        setSuccessMessage(t('profile.saveSuccess', 'Profile saved successfully!'));
         setIsEditing(false);
         await checkAuth();
 
@@ -275,12 +321,12 @@ function Profile() {
             .join('\n');
           setError(errorMessages);
         } else {
-          setError(errorData.error || 'Failed to save profile');
+          setError(errorData.error || t('profile.saveError', 'Failed to save profile'));
         }
       }
     } catch (err) {
       console.error('Save profile error:', err);
-      setError('Something went wrong. Please try again.');
+      setError(t('profile.genericError', 'Something went wrong. Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -291,8 +337,8 @@ function Profile() {
       <div className="profile-page">
         <div className="error-container">
           <AlertCircle size={48} />
-          <h2>Please login to view your profile</h2>
-          <a href="/login" className="primary-button">Login</a>
+          <h2>{t('profile.loginPrompt', 'Please login to view your profile')}</h2>
+          <a href="/login" className="primary-button">{t('auth.loginButton', 'Login')}</a>
         </div>
       </div>
     );
@@ -303,7 +349,7 @@ function Profile() {
       <div className="profile-page">
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>Loading profile...</p>
+          <p>{t('profile.loading', 'Loading profile...')}</p>
         </div>
       </div>
     );
@@ -320,19 +366,19 @@ function Profile() {
               <h1>{formData.first_name && formData.last_name
                 ? `${formData.first_name} ${formData.last_name}`
                 : user.email}</h1>
-              <p className="user-type">{user.user_type === 'KU_Student' ? 'KU Student' : 'External Student'}</p>
+              <p className="user-type">{getUserTypeLabel()}</p>
               {user.user_type === 'KU_Student' && (
                 <>
                   {!user.is_verified && (
                     <span className="verification-badge pending">
                       <AlertCircle size={16} />
-                      Email Not Verified
+                      {t('profile.emailNotVerified', 'Email Not Verified')}
                     </span>
                   )}
                   {user.is_verified && (
                     <span className="verification-badge verified">
                       <CheckCircle size={16} />
-                      Verified KU Student
+                      {t('profile.verifiedKuStudent', 'Verified KU Student')}
                     </span>
                   )}
                 </>
@@ -344,7 +390,7 @@ function Profile() {
             <div className="header-actions">
               <button className="edit-button" onClick={() => setIsEditing(true)}>
                 <Edit size={20} />
-                Edit Profile
+                {t('profile.editProfile', 'Edit Profile')}
               </button>
             </div>
           )}
@@ -357,21 +403,21 @@ function Profile() {
             onClick={() => setActiveTab('profile')}
           >
             <User size={20} />
-            Profile Info
+            {t('profile.profileInfoTab', 'Profile Info')}
           </button>
           <button 
             className={`tab-button ${activeTab === 'listings' ? 'active' : ''}`}
             onClick={() => setActiveTab('listings')}
           >
             <Building2 size={20} />
-            My Listings
+            {t('profile.myListingsTab', 'My Listings')}
           </button>
           <button 
             className={`tab-button ${activeTab === 'blocked' ? 'active' : ''}`}
             onClick={() => setActiveTab('blocked')}
           >
             <UserX size={20} />
-            Blocked Users
+            {t('profile.blockedUsersTab', 'Blocked Users')}
           </button>
         </div>
 
@@ -400,12 +446,12 @@ function Profile() {
                 <div className="form-section">
                   <h2>
                     <User size={24} />
-                    Personal Information
+                    {t('profile.personalInfo', 'Personal Information')}
                   </h2>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="first_name">First Name *</label>
+                      <label htmlFor="first_name">{t('profile.firstName', 'First Name')} *</label>
                       <input
                         type="text"
                         id="first_name"
@@ -417,7 +463,7 @@ function Profile() {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="last_name">Last Name *</label>
+                      <label htmlFor="last_name">{t('profile.lastName', 'Last Name')} *</label>
                       <input
                         type="text"
                         id="last_name"
@@ -431,19 +477,19 @@ function Profile() {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="phone_number">Phone Number</label>
+                      <label htmlFor="phone_number">{t('profile.phoneNumber', 'Phone Number')}</label>
                       <input
                         type="tel"
                         id="phone_number"
                         name="phone_number"
                         value={formData.phone_number}
                         onChange={handleChange}
-                        placeholder="+90 555 123 4567"
+                        placeholder={t('profile.phonePlaceholder', '+90 555 123 4567')}
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="email">Email</label>
+                      <label htmlFor="email">{t('profile.email', 'Email')}</label>
                       <input
                         type="email"
                         value={user.email}
@@ -454,7 +500,7 @@ function Profile() {
                   </div>
 
                   <div className="photo-upload">
-                    <label htmlFor="profile_photo_url">Profile Photo</label>
+                    <label htmlFor="profile_photo_url">{t('profile.profilePhoto', 'Profile Photo')}</label>
                     <div className="photo-input">
                       <div className="photo-preview">
                         {renderAvatar()}
@@ -466,18 +512,18 @@ function Profile() {
                             accept="image/*"
                             onChange={handleFileChange}
                           />
-                          Choose a photo
+                          {t('profile.choosePhoto', 'Choose a photo')}
                         </label>
-                        <div className="divider-text">or</div>
+                        <div className="divider-text">{t('profile.or', 'or')}</div>
                         <input
                           type="url"
                           id="profile_photo_url"
                           name="profile_photo_url"
                           value={formData.profile_photo_url}
                           onChange={handleChange}
-                          placeholder="https://example.com/photo.jpg"
+                          placeholder={t('profile.photoUrlPlaceholder', 'https://example.com/photo.jpg')}
                         />
-                        <small>Upload JPG, PNG, or WEBP (max 5MB) or paste a direct link.</small>
+                        <small>{t('profile.photoHelp', 'Upload JPG, PNG, or WEBP (max 5MB) or paste a direct link.')}</small>
                       </div>
                     </div>
                   </div>
@@ -485,7 +531,7 @@ function Profile() {
                   {user.user_type === 'KU_Student' && (
                     <div className="form-row">
                       <div className="form-group full-width">
-                        <label>Departments </label>
+                        <label>{t('profile.departments', 'Departments')}</label>
                         <DepartmentSelector
                           selectedDepartments={formData.departments}
                           onChange={handleDepartmentsChange}
@@ -499,12 +545,12 @@ function Profile() {
                 <div className="form-section">
                   <h2>
                     <Home size={24} />
-                    Housing Preferences
+                    {t('profile.housingPreferences', 'Housing Preferences')}
                   </h2>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="budget_min">Budget Min (₺/month) *</label>
+                      <label htmlFor="budget_min">{t('profile.budgetMin', 'Budget Min (₺/month)')} *</label>
                       <input
                         type="number"
                         id="budget_min"
@@ -512,12 +558,12 @@ function Profile() {
                         value={formData.budget_min}
                         onChange={handleChange}
                         required
-                        placeholder="3000"
+                        placeholder={t('profile.budgetMinPlaceholder', '3000')}
                       />
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="budget_max">Budget Max (₺/month) *</label>
+                      <label htmlFor="budget_max">{t('profile.budgetMax', 'Budget Max (₺/month)')} *</label>
                       <input
                         type="number"
                         id="budget_max"
@@ -525,13 +571,13 @@ function Profile() {
                         value={formData.budget_max}
                         onChange={handleChange}
                         required
-                        placeholder="5000"
+                        placeholder={t('profile.budgetMaxPlaceholder', '5000')}
                       />
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label>Preferred Neighborhoods</label>
+                    <label>{t('profile.preferredNeighborhoods', 'Preferred Neighborhoods')}</label>
                     <LocationSelector
                       selectedNeighborhoods={formData.preferred_neighborhoods}
                       onChange={handleNeighborhoodsChange}
@@ -540,21 +586,21 @@ function Profile() {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="room_type_preference">Room Type Preference</label>
+                      <label htmlFor="room_type_preference">{t('profile.roomTypePreference', 'Room Type Preference')}</label>
                       <select
                         id="room_type_preference"
                         name="room_type_preference"
                         value={formData.room_type_preference}
                         onChange={handleChange}
                       >
-                        <option value="private">Private Room</option>
-                        <option value="shared">Shared Room</option>
-                        <option value="entire_place">Entire Place</option>
+                        <option value="private">{t('profile.roomTypePrivate', 'Private Room')}</option>
+                        <option value="shared">{t('profile.roomTypeShared', 'Shared Room')}</option>
+                        <option value="entire_place">{t('profile.roomTypeEntire', 'Entire Place')}</option>
                       </select>
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="move_in_date">Preferred Move-in Date</label>
+                      <label htmlFor="move_in_date">{t('profile.moveInDate', 'Preferred Move-in Date')}</label>
                       <input
                         type="date"
                         id="move_in_date"
@@ -570,35 +616,35 @@ function Profile() {
                 <div className="form-section">
                   <h2>
                     <Sparkles size={24} />
-                    Lifestyle Preferences
+                    {t('profile.lifestylePreferences', 'Lifestyle Preferences')}
                   </h2>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="sleep_schedule">Sleep Schedule</label>
+                      <label htmlFor="sleep_schedule">{t('profile.sleepSchedule', 'Sleep Schedule')}</label>
                       <select
                         id="sleep_schedule"
                         name="sleep_schedule"
                         value={formData.sleep_schedule}
                         onChange={handleChange}
                       >
-                        <option value="early_bird">Early Bird</option>
-                        <option value="night_owl">Night Owl</option>
-                        <option value="flexible">Flexible</option>
+                        <option value="early_bird">{t('profile.sleepEarlyBird', 'Early Bird')}</option>
+                        <option value="night_owl">{t('profile.sleepNightOwl', 'Night Owl')}</option>
+                        <option value="flexible">{t('profile.sleepFlexible', 'Flexible')}</option>
                       </select>
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="cleanliness_level">Cleanliness Level</label>
+                      <label htmlFor="cleanliness_level">{t('profile.cleanlinessLevel', 'Cleanliness Level')}</label>
                       <select
                         id="cleanliness_level"
                         name="cleanliness_level"
                         value={formData.cleanliness_level}
                         onChange={handleChange}
                       >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
+                        <option value="low">{t('profile.cleanlinessLow', 'Low')}</option>
+                        <option value="medium">{t('profile.cleanlinessMedium', 'Medium')}</option>
+                        <option value="high">{t('profile.cleanlinessHigh', 'High')}</option>
                       </select>
                     </div>
                   </div>
@@ -611,7 +657,7 @@ function Profile() {
                         checked={formData.smoker}
                         onChange={handleChange}
                       />
-                      <span>I am a smoker</span>
+                      <span>{t('profile.smokerLabel', 'I am a smoker')}</span>
                     </label>
 
                     <label className="checkbox-label">
@@ -621,19 +667,19 @@ function Profile() {
                         checked={formData.pets}
                         onChange={handleChange}
                       />
-                      <span>I have pets</span>
+                      <span>{t('profile.petsLabel', 'I have pets')}</span>
                     </label>
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="lifestyle_notes">Additional Notes</label>
+                    <label htmlFor="lifestyle_notes">{t('profile.additionalNotes', 'Additional Notes')}</label>
                     <textarea
                       id="lifestyle_notes"
                       name="lifestyle_notes"
                       value={formData.lifestyle_notes}
                       onChange={handleChange}
                       rows="4"
-                      placeholder="Tell potential roommates about yourself, your hobbies, preferences, etc."
+                      placeholder={t('profile.notesPlaceholder', 'Tell potential roommates about yourself, your hobbies, preferences, etc.')}
                     />
                   </div>
                 </div>
@@ -655,12 +701,12 @@ function Profile() {
                       }}
                     >
                       <X size={20} />
-                      Cancel
+                      {t('profile.cancel', 'Cancel')}
                     </button>
                   )}
                   <button type="submit" className="save-button" disabled={saving}>
                     <Save size={20} />
-                    {saving ? 'Saving...' : 'Save Profile'}
+                    {saving ? t('profile.saving', 'Saving...') : t('profile.saveProfile', 'Save Profile')}
                   </button>
                 </div>
               </form>
@@ -671,20 +717,20 @@ function Profile() {
                 <div className="view-section">
                   <h2>
                     <User size={24} />
-                    Personal Information
+                    {t('profile.personalInfo', 'Personal Information')}
                   </h2>
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>Name</label>
+                      <label>{t('profile.name', 'Name')}</label>
                       <p>{formData.first_name} {formData.last_name}</p>
                     </div>
                     <div className="info-item">
-                      <label>Email</label>
+                      <label>{t('profile.email', 'Email')}</label>
                       <p>{user.email}</p>
                     </div>
                     {formData.phone_number && (
                       <div className="info-item">
-                        <label>Phone</label>
+                        <label>{t('profile.phone', 'Phone')}</label>
                         <p>{formData.phone_number}</p>
                       </div>
                     )}
@@ -692,7 +738,7 @@ function Profile() {
                       <>
                         {formData.departments && formData.departments.length > 0 && (
                           <div className="info-item full-width">
-                            <label>Departments</label>
+                            <label>{t('profile.departments', 'Departments')}</label>
                             <div className="flex flex-wrap gap-2 mt-1">
                               {formData.departments.map(dept => (
                                 <span key={dept.id} className="department-tag">
@@ -712,16 +758,18 @@ function Profile() {
                 <div className="view-section">
                   <h2>
                     <Home size={24} />
-                    Housing Preferences
+                    {t('profile.housingPreferences', 'Housing Preferences')}
                   </h2>
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>Budget Range</label>
-                      <p>₺{formData.budget_min} - ₺{formData.budget_max} / month</p>
+                      <label>{t('profile.budgetRange', 'Budget Range')}</label>
+                      <p>
+                        ₺{formData.budget_min} - ₺{formData.budget_max} {t('currency.perMonth', '/ month')}
+                      </p>
                     </div>
                     {formData.preferred_neighborhoods && formData.preferred_neighborhoods.length > 0 && (
                       <div className="info-item full-width">
-                        <label>Preferred Neighborhoods</label>
+                        <label>{t('profile.preferredNeighborhoods', 'Preferred Neighborhoods')}</label>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {Array.isArray(formData.preferred_neighborhoods) ? (
                             formData.preferred_neighborhoods.map((n, i) => (
@@ -740,14 +788,13 @@ function Profile() {
                       </div>
                     )}
                     <div className="info-item">
-                      <label>Room Type</label>
-                      <p>{formData.room_type_preference === 'private' ? 'Private Room' :
-                        formData.room_type_preference === 'shared' ? 'Shared Room' : 'Entire Place'}</p>
+                      <label>{t('profile.roomType', 'Room Type')}</label>
+                      <p>{getRoomTypeLabel(formData.room_type_preference)}</p>
                     </div>
                     {formData.move_in_date && (
                       <div className="info-item">
-                        <label>Move-in Date</label>
-                        <p>{new Date(formData.move_in_date).toLocaleDateString()}</p>
+                        <label>{t('profile.moveInDateLabel', 'Move-in Date')}</label>
+                        <p>{new Date(formData.move_in_date).toLocaleDateString(locale)}</p>
                       </div>
                     )}
                   </div>
@@ -757,30 +804,29 @@ function Profile() {
                 <div className="view-section">
                   <h2>
                     <Sparkles size={24} />
-                    Lifestyle Preferences
+                    {t('profile.lifestylePreferences', 'Lifestyle Preferences')}
                   </h2>
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>Sleep Schedule</label>
-                      <p>{formData.sleep_schedule === 'early_bird' ? 'Early Bird' :
-                        formData.sleep_schedule === 'night_owl' ? 'Night Owl' : 'Flexible'}</p>
+                      <label>{t('profile.sleepSchedule', 'Sleep Schedule')}</label>
+                      <p>{getSleepScheduleLabel(formData.sleep_schedule)}</p>
                     </div>
                     <div className="info-item">
-                      <label>Cleanliness Level</label>
-                      <p>{formData.cleanliness_level.charAt(0).toUpperCase() + formData.cleanliness_level.slice(1)}</p>
+                      <label>{t('profile.cleanlinessLevel', 'Cleanliness Level')}</label>
+                      <p>{getCleanlinessLabel(formData.cleanliness_level)}</p>
                     </div>
                     <div className="info-item">
-                      <label>Smoker</label>
-                      <p>{formData.smoker ? 'Yes' : 'No'}</p>
+                      <label>{t('profile.smoker', 'Smoker')}</label>
+                      <p>{formData.smoker ? t('profile.yes', 'Yes') : t('profile.no', 'No')}</p>
                     </div>
                     <div className="info-item">
-                      <label>Pets</label>
-                      <p>{formData.pets ? 'Yes' : 'No'}</p>
+                      <label>{t('profile.pets', 'Pets')}</label>
+                      <p>{formData.pets ? t('profile.yes', 'Yes') : t('profile.no', 'No')}</p>
                     </div>
                   </div>
                   {formData.lifestyle_notes && (
                     <div className="info-item full-width">
-                      <label>Additional Notes</label>
+                      <label>{t('profile.additionalNotes', 'Additional Notes')}</label>
                       <p>{formData.lifestyle_notes}</p>
                     </div>
                   )}
