@@ -9,7 +9,6 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
 
 import os
 import logging
-import sys
 
 from django.core.wsgi import get_wsgi_application
 from django.conf import settings
@@ -22,17 +21,5 @@ logger = logging.getLogger(__name__)
 try:
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     os.makedirs(os.path.join(settings.MEDIA_ROOT, "listing_images"), exist_ok=True)
-    print(
-        f"MEDIA_ROOT={settings.MEDIA_ROOT} MEDIA_URL={settings.MEDIA_URL} "
-        f"SERVE_MEDIA={settings.SERVE_MEDIA}",
-        file=sys.stderr,
-        flush=True,
-    )
-    logger.info(
-        "MEDIA_ROOT=%s MEDIA_URL=%s SERVE_MEDIA=%s",
-        settings.MEDIA_ROOT,
-        settings.MEDIA_URL,
-        settings.SERVE_MEDIA,
-    )
 except Exception:
     logger.exception("Failed to initialize media directories")
