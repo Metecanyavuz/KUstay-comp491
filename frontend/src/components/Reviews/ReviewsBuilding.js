@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, MapPin, Star } from 'lucide-react';
 import { Link, useLocation, useParams } from 'react-router-dom';
+import { useI18n } from '../../context/I18nContext';
 import './Reviews.css';
 import './ReviewsBuilding.css';
 
 function ReviewsBuilding() {
+  const { t } = useI18n();
   const { buildingName } = useParams();
   const location = useLocation();
   const decodedName = useMemo(
@@ -166,7 +168,9 @@ function ReviewsBuilding() {
                   </div>
                 </div>
                 {review.unit_details && (
-                  <p className="block-review-unit">Unit: {review.unit_details}</p>
+                  <p className="block-review-unit">
+                    {t('reviews.unitInline', 'Unit')}: {review.unit_details}
+                  </p>
                 )}
                 {review.comment ? (
                   <p className="block-review-comment">"{review.comment}"</p>

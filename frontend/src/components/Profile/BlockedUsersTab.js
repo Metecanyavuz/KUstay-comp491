@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { UserX, CheckCircle, Calendar } from 'lucide-react';
 import apiClient from '../../utils/axiosClient';
+import { useI18n } from '../../context/I18nContext';
 import './BlockedUsersTab.css';
 
 const BlockedUsersTab = () => {
+  const { t } = useI18n();
+  const locale = t('general.locale', 'en-US');
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -18,7 +21,7 @@ const BlockedUsersTab = () => {
       const response = await apiClient.get('/api/blocked-users/');
       setBlockedUsers(response.data.blocked_users);
     } catch (err) {
-      setError('Failed to load blocked users');
+      setError(t('blockedUsers.loadError', 'Failed to load blocked users'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -26,7 +29,8 @@ const BlockedUsersTab = () => {
   };
 
   const handleUnblock = async (userId, username) => {
-    if (!window.confirm(`Are you sure you want to unblock ${username}?`)) {
+    const confirmMessage = `${t('blockedUsers.confirm', 'Are you sure you want to unblock')} ${username}?`;
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
@@ -35,7 +39,7 @@ const BlockedUsersTab = () => {
       await apiClient.delete(`/api/unblock-user/${userId}/`);
       setBlockedUsers(blockedUsers.filter((entry) => entry.user.id !== userId));
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to unblock user');
+      alert(err.response?.data?.error || t('blockedUsers.unblockError', 'Failed to unblock user'));
     } finally {
       setUnblocking(null);
     }
@@ -46,7 +50,7 @@ const BlockedUsersTab = () => {
       <div className="blocked-users-tab">
         <div className="loading-state">
           <div className="spinner-small"></div>
-          <p>Loading blocked users...</p>
+          <p>{t('blockedUsers.loading', 'Loading blocked users...')}</p>
         </div>
       </div>
     );
@@ -63,19 +67,19 @@ const BlockedUsersTab = () => {
   }
 
   return (
-    <div className="blocked-users-tab">
-      <div className="tab-header">
-        <div>
-          <h2>Blocked Users</h2>
-          <p className="subtitle">Manage users you've blocked</p>
+      <div className="blocked-users-tab">
+        <div className="tab-header">
+          <div>
+            <h2>{t('blockedUsers.title', 'Blocked Users')}</h2>
+            <p className="subtitle">{t('blockedUsers.subtitle', "Manage users you've blocked")}</p>
+          </div>
         </div>
-      </div>
 
       {blockedUsers.length === 0 ? (
         <div className="empty-state">
           <UserX size={64} className="empty-icon" />
-          <h3>No Blocked Users</h3>
-          <p>You haven't blocked anyone yet.</p>
+          <h3>{t('blockedUsers.emptyTitle', 'No Blocked Users')}</h3>
+          <p>{t('blockedUsers.emptyBody', "You haven't blocked anyone yet.")}</p>
         </div>
       ) : (
         <div className="blocked-users-grid">
@@ -91,7 +95,10 @@ const BlockedUsersTab = () => {
                 
                 <div className="blocked-info">
                   <Calendar size={14} />
-                  <span>Blocked {new Date(entry.blocked_at).toLocaleDateString()}</span>
+                  <span>
+                    {t('blockedUsers.blockedOn', 'Blocked')}{' '}
+                    {new Date(entry.blocked_at).toLocaleDateString(locale)}
+                  </span>
                 </div>
               </div>
 
@@ -103,12 +110,12 @@ const BlockedUsersTab = () => {
                 {unblocking === entry.user.id ? (
                   <>
                     <div className="btn-spinner"></div>
-                    Unblocking...
+                    {t('blockedUsers.unblocking', 'Unblocking...')}
                   </>
                 ) : (
                   <>
                     <CheckCircle size={18} />
-                    Unblock
+                    {t('blockedUsers.unblock', 'Unblock')}
                   </>
                 )}
               </button>

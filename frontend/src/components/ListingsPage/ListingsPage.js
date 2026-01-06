@@ -71,17 +71,17 @@ const buildSearchFromFilters = (filters) => {
   return params.toString();
 };
 
-const formatPrice = (value) => {
+const formatPrice = (value, perMonthLabel = '₺/month') => {
   if (value === null || value === undefined || value === '') {
     return '—';
   }
 
   const numericValue = Number(value);
   if (Number.isNaN(numericValue)) {
-    return `${value} ₺/month`;
+    return `${value} ${perMonthLabel}`;
   }
 
-  return `${numericValue.toLocaleString('tr-TR')} ₺/month`;
+  return `${numericValue.toLocaleString('tr-TR')} ${perMonthLabel}`;
 };
 
 const safeNumber = (value) => {
@@ -126,6 +126,20 @@ function ListingsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const perMonthLabel = t('currency.perMonth', '₺/month');
+  const amenityLabels = useMemo(
+    () => ({
+      'Wi-Fi Included': t('amenities.wifi', 'Wi-Fi Included'),
+      'Utilities Included': t('amenities.utilities', 'Utilities Included'),
+      'Washer/Dryer': t('amenities.washerDryer', 'Washer/Dryer'),
+      'Parking Spot': t('amenities.parking', 'Parking Spot'),
+      'Pet Friendly': t('amenities.petFriendly', 'Pet Friendly'),
+      'Air Conditioning': t('amenities.ac', 'Air Conditioning'),
+      Furnished: t('amenities.furnished', 'Furnished'),
+      'Gym Access': t('amenities.gym', 'Gym Access'),
+    }),
+    [t],
+  );
 
   const [formFilters, setFormFilters] = useState(() =>
     parseFiltersFromSearch(location.search),
@@ -299,14 +313,14 @@ function ListingsPage() {
     activeFilters.amenities.forEach((amenity) => {
       chips.push({
         key: `amenity-${amenity}`,
-        label: amenity,
+        label: amenityLabels[amenity] || amenity,
         type: 'amenity',
         value: amenity,
       });
     });
 
     return chips;
-  }, [activeFilters]);
+  }, [activeFilters, amenityLabels]);
 
   const formatDateLocalized = (value) => {
     if (!value) {
@@ -524,7 +538,7 @@ function ListingsPage() {
                     }`}
                     onClick={() => handleAmenityToggle(amenity)}
                   >
-                    {amenity}
+                    {amenityLabels[amenity] || amenity}
                   </button>
                 ))}
               </div>
@@ -656,7 +670,7 @@ function ListingsPage() {
                       <div className="listing-card-header">
                         <h3>{listing.title}</h3>
                         <p className="listing-price">
-                          {formatPrice(listing.rent_amount)}
+                          {formatPrice(listing.rent_amount, perMonthLabel)}
                         </p>
                       </div>
 
@@ -669,11 +683,12 @@ function ListingsPage() {
                         <span>
                           <BedDouble size={16} />
                           {roomTypeLabels[listing.room_type] ||
-                            'Room type'}
+                            t('listings.roomType', 'Room type')}
                         </span>
                         <span>
                           <Users size={16} />
-                          {listing.available_rooms} / {listing.total_rooms} rooms
+                          {listing.available_rooms} / {listing.total_rooms}{' '}
+                          {t('listings.roomsLabel', 'rooms')}
                         </span>
                         <span>
                           <Calendar size={16} />
@@ -685,7 +700,7 @@ function ListingsPage() {
                       <div className="listing-amenities">
                         {amenities.slice(0, 3).map((amenity) => (
                           <span key={amenity} className="amenity-pill">
-                            {amenity}
+                            {amenityLabels[amenity] || amenity}
                           </span>
                         ))}
                         {amenities.length > 3 && (
