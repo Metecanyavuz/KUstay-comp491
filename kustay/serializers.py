@@ -170,7 +170,11 @@ class BlockReviewSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     departments = DepartmentSerializer(many=True, read_only=True)
     department_ids = serializers.PrimaryKeyRelatedField(
-        many=True, write_only=True, queryset=Department.objects.all(), source='departments'
+        many=True,
+        write_only=True,
+        queryset=Department.objects.all(),
+        source='departments',
+        required=False,
     )
 
     class Meta:

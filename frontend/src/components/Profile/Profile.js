@@ -528,17 +528,15 @@ function Profile() {
                     </div>
                   </div>
 
-                  {user.user_type === 'KU_Student' && (
-                    <div className="form-row">
-                      <div className="form-group full-width">
-                        <label>{t('profile.departments', 'Departments')}</label>
-                        <DepartmentSelector
-                          selectedDepartments={formData.departments}
-                          onChange={handleDepartmentsChange}
-                        />
-                      </div>
+                  <div className="form-row">
+                    <div className="form-group full-width">
+                      <label>{t('profile.departments', 'Departments')}</label>
+                      <DepartmentSelector
+                        selectedDepartments={formData.departments}
+                        onChange={handleDepartmentsChange}
+                      />
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Housing Preferences */}
@@ -734,22 +732,18 @@ function Profile() {
                         <p>{formData.phone_number}</p>
                       </div>
                     )}
-                    {user.user_type === 'KU_Student' && (
-                      <>
-                        {formData.departments && formData.departments.length > 0 && (
-                          <div className="info-item full-width">
-                            <label>{t('profile.departments', 'Departments')}</label>
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {formData.departments.map(dept => (
-                                <span key={dept.id} className="department-tag">
-                                  <GraduationCap size={12} />
-                                  {dept.name}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
+                    {formData.departments && formData.departments.length > 0 && (
+                      <div className="info-item full-width">
+                        <label>{t('profile.departments', 'Departments')}</label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {formData.departments.map(dept => (
+                            <span key={dept.id} className="department-tag">
+                              <GraduationCap size={12} />
+                              {dept.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
