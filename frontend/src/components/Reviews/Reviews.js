@@ -10,6 +10,8 @@ import './Reviews.css';
 function Reviews() {
   const { user } = useAuth();
   const { t } = useI18n();
+  const isKuStudent = user?.user_type === 'KU_Student';
+  const isKuVerified = isKuStudent && user?.is_verified;
   const [buildingGroups, setBuildingGroups] = useState([]);
   const [buildingsLoading, setBuildingsLoading] = useState(true);
   const [buildingsError, setBuildingsError] = useState('');
@@ -285,87 +287,97 @@ function Reviews() {
           </p>
 
           {user ? (
-            <form onSubmit={handleReviewSubmit} className="block-review-form">
-              <label>
-                {t('reviews.building', 'Building')}
-                <select value={selectedBuilding} onChange={handleBuildingChange}>
-                  <option value="">{t('reviews.selectBuildingOption', 'Select a building')}</option>
-                  {BUILDING_OPTIONS.map((item) => (
-                    <option key={item.name} value={item.name}>
-                      {item.name}
-                    </option>
-                  ))}
-                  <option value="other">{t('reviews.otherBuilding', 'Other (type manually)')}</option>
-                </select>
-              </label>
+            isKuVerified ? (
+              <form onSubmit={handleReviewSubmit} className="block-review-form">
+                <label>
+                  {t('reviews.building', 'Building')}
+                  <select value={selectedBuilding} onChange={handleBuildingChange}>
+                    <option value="">{t('reviews.selectBuildingOption', 'Select a building')}</option>
+                    {BUILDING_OPTIONS.map((item) => (
+                      <option key={item.name} value={item.name}>
+                        {item.name}
+                      </option>
+                    ))}
+                    <option value="other">{t('reviews.otherBuilding', 'Other (type manually)')}</option>
+                  </select>
+                </label>
 
-              {selectedBuilding === 'other' ? (
-                <>
-                  <label>
-                    {t('reviews.buildingName', 'Building name')}
-                    <input
-                      type="text"
-                      value={customBuilding}
-                      onChange={(event) => setCustomBuilding(event.target.value)}
-                      placeholder={t('reviews.buildingPlaceholder', 'Example: Panorama Suites')}
-                    />
-                  </label>
+                {selectedBuilding === 'other' ? (
+                  <>
+                    <label>
+                      {t('reviews.buildingName', 'Building name')}
+                      <input
+                        type="text"
+                        value={customBuilding}
+                        onChange={(event) => setCustomBuilding(event.target.value)}
+                        placeholder={t('reviews.buildingPlaceholder', 'Example: Panorama Suites')}
+                      />
+                    </label>
+                    <label>
+                      {t('reviews.neighborhood', 'Neighborhood')}
+                      <input
+                        type="text"
+                        value={customNeighborhood}
+                        onChange={(event) => setCustomNeighborhood(event.target.value)}
+                        placeholder={t('reviews.neighborhoodPlaceholder', 'Example: Zekeriyakoy')}
+                      />
+                    </label>
+                  </>
+                ) : (
                   <label>
                     {t('reviews.neighborhood', 'Neighborhood')}
                     <input
                       type="text"
-                      value={customNeighborhood}
-                      onChange={(event) => setCustomNeighborhood(event.target.value)}
-                      placeholder={t('reviews.neighborhoodPlaceholder', 'Example: Zekeriyakoy')}
+                      value={selectedNeighborhood}
+                      placeholder={t('reviews.selectBuildingFirst', 'Select a building first')}
+                      readOnly
                     />
                   </label>
-                </>
-              ) : (
+                  )}
+
                 <label>
-                  {t('reviews.neighborhood', 'Neighborhood')}
+                  {t('reviews.unit', 'Block / apartment (optional)')}
                   <input
                     type="text"
-                    value={selectedNeighborhood}
-                    placeholder={t('reviews.selectBuildingFirst', 'Select a building first')}
-                    readOnly
+                    value={unitDetails}
+                    onChange={(event) => setUnitDetails(event.target.value)}
+                    placeholder={t('reviews.unitPlaceholder', 'Example: B Block, Apt 55')}
                   />
                 </label>
-                )}
 
-              <label>
-                {t('reviews.unit', 'Block / apartment (optional)')}
-                <input
-                  type="text"
-                  value={unitDetails}
-                  onChange={(event) => setUnitDetails(event.target.value)}
-                  placeholder={t('reviews.unitPlaceholder', 'Example: B Block, Apt 55')}
-                />
-              </label>
+                {renderRatingPicker(t('reviews.noise', 'Noise'), ratings.noise, (value) =>
+                  handleRatingChange('noise', value))}
+                {renderRatingPicker(t('reviews.management', 'Management'), ratings.management, (value) =>
+                  handleRatingChange('management', value))}
+                {renderRatingPicker(t('reviews.safety', 'Safety'), ratings.safety, (value) =>
+                  handleRatingChange('safety', value))}
+                {renderRatingPicker(t('reviews.transport', 'Transport'), ratings.transport, (value) =>
+                  handleRatingChange('transport', value))}
 
-              {renderRatingPicker(t('reviews.noise', 'Noise'), ratings.noise, (value) =>
-                handleRatingChange('noise', value))}
-              {renderRatingPicker(t('reviews.management', 'Management'), ratings.management, (value) =>
-                handleRatingChange('management', value))}
-              {renderRatingPicker(t('reviews.safety', 'Safety'), ratings.safety, (value) =>
-                handleRatingChange('safety', value))}
-              {renderRatingPicker(t('reviews.transport', 'Transport'), ratings.transport, (value) =>
-                handleRatingChange('transport', value))}
+                <label>
+                  {t('reviews.comment', 'Comment (optional)')}
+                  <textarea
+                    rows={3}
+                    value={comment}
+                    onChange={(event) => setComment(event.target.value)}
+                    placeholder={t('reviews.commentPlaceholder', 'Share your experience. If you want, you can mention apartment details.')}
+                  />
+                </label>
 
-              <label>
-                {t('reviews.comment', 'Comment (optional)')}
-                <textarea
-                  rows={3}
-                  value={comment}
-                  onChange={(event) => setComment(event.target.value)}
-                  placeholder={t('reviews.commentPlaceholder', 'Share your experience. If you want, you can mention apartment details.')}
-                />
-              </label>
-
-              <button type="submit" className="block-review-submit" disabled={reviewSubmitting}>
-                {reviewSubmitting ? t('reviews.submitting', 'Submitting...') : t('reviews.submit', 'Submit review')}
-              </button>
-              {reviewNotice && <div className="block-review-muted">{reviewNotice}</div>}
-            </form>
+                <button type="submit" className="block-review-submit" disabled={reviewSubmitting}>
+                  {reviewSubmitting ? t('reviews.submitting', 'Submitting...') : t('reviews.submit', 'Submit review')}
+                </button>
+                {reviewNotice && <div className="block-review-muted">{reviewNotice}</div>}
+              </form>
+            ) : (
+              <div className="block-review-login">
+                <p className="block-review-muted">
+                  {isKuStudent
+                    ? t('reviews.verifiedOnly', 'Verify your KU email to submit a building review.')
+                    : t('reviews.kuOnly', 'Only verified KU students can submit building reviews.')}
+                </p>
+              </div>
+            )
           ) : (
             <div className="block-review-login">
               <p className="block-review-muted">{t('reviews.loginPrompt', 'Log in to leave a review.')}</p>

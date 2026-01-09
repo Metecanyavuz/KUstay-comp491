@@ -836,6 +836,11 @@ def block_reviews_view(request):
 
     if not request.user.is_authenticated:
         return Response({'error': 'Authentication required.'}, status=401)
+    if request.user.user_type != 'KU_Student' or not request.user.is_verified:
+        return Response(
+            {'error': 'Only verified KU students can submit building reviews.'},
+            status=403,
+        )
 
     data = request.data.copy()
     block_name = (data.get('block_name') or '').strip()

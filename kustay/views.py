@@ -594,6 +594,12 @@ def blocked_users_view(request):
 @login_required
 def block_review_create_view(request):
     """Create a new block/site review"""
+    if request.user.user_type != "KU_Student" or not request.user.is_verified:
+        messages.error(
+            request,
+            "Only verified KU students can submit building reviews.",
+        )
+        return redirect("block_reviews")
     if request.method == "POST":
         form = BlockReviewForm(request.POST)
         if form.is_valid():
@@ -614,6 +620,12 @@ def block_review_create_view(request):
 @login_required
 def block_review_update_view(request, review_id):
     """Update an existing block review"""
+    if request.user.user_type != "KU_Student" or not request.user.is_verified:
+        messages.error(
+            request,
+            "Only verified KU students can submit building reviews.",
+        )
+        return redirect("block_reviews")
     review = get_object_or_404(BlockReview, pk=review_id, user=request.user)
 
     if request.method == "POST":
