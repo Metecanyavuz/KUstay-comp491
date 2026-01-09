@@ -531,6 +531,8 @@ const translations = {
     'reviews.rateAll': 'Please rate all categories.',
     'reviews.submitError': 'Unable to submit review.',
     'reviews.thanks': 'Thanks! Your review is pending approval.',
+    'reviews.kuOnly': 'Only verified KU students can submit building reviews.',
+    'reviews.verifiedOnly': 'Verify your KU email to submit a building review.',
 
     // General
     'general.locale': 'en-US',
@@ -1067,6 +1069,8 @@ const translations = {
     'reviews.rateAll': 'Lütfen tüm kategorileri puanla.',
     'reviews.submitError': 'Yorum gönderilemedi.',
     'reviews.thanks': 'Teşekkürler! Yorumun onay bekliyor.',
+    'reviews.kuOnly': 'Sadece doğrulanmış KU öğrencileri bina yorumu paylaşabilir.',
+    'reviews.verifiedOnly': 'Bina yorumu paylaşmak için KU e-postanı doğrula.',
 
     // General
     'general.locale': 'tr-TR',
