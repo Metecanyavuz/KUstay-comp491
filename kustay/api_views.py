@@ -1023,13 +1023,8 @@ def home_page_stats(request):
     active_listings_count = Listing.objects.filter(is_active=True).count()
     students_count = User.objects.count()
     
-    avg_match_rate = MatchCompatibility.objects.aggregate(avg=Avg('compatibility_score'))['avg']
-    
-    if avg_match_rate:
-        match_rate_val = round(avg_match_rate)
-        match_rate_str = f"{match_rate_val}%"
-    else:
-        match_rate_str = "95%"
+    # Match rate now uses a fixed display value for the homepage
+    match_rate_str = "82%"
 
     return Response({
         "active_listings": f"{active_listings_count}+",
